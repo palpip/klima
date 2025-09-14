@@ -1,7 +1,8 @@
-/DATA/*
-/seko/*
-/.vscode/*
-.git/
-/.venv/*
-/__pycache__/*
-.ipynb_checkpoints/
+DATA
+SHMU
+seko
+.vscode
+.git
+.venv
+__pycache__
+.ipynb_checkpoints

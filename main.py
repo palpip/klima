@@ -1,3 +1,4 @@
+
 import pandas as pd
 import re
 import openpyxl
@@ -6,14 +7,14 @@ import sqlite3
 import pyarrow
 from pathlib import Path
 
-TOPDIR = r'/home/pp/program/jupyter/Brezno - Klima/'
-TEMPDIR= TOPDIR + r'temp/'
-UHRNDIR = TOPDIR + r'uhrn/'
-UHRNYDIR = TOPDIR + r'zrazkycelk/'
-VODOMERDIR = TOPDIR + r'VodomerneStanice/'
-HYDROMETERDIR = TOPDIR + r'HydrologickeSpravodajstvo/'
-TEMPTESTFILE = TEMPDIR + '2025-07-30-15-00.html'
-UHRNTESTFILE = UHRNDIR + '2025-07-30-23-45.html'
+TOPDIR = r'/home/pp/program/jupyter/SHMU/zber/'
+TEPLOTY_SK_DIR = TOPDIR + r'teploty_sk/'
+ZRAZKY_BREZNO_DIR = TOPDIR + r'zrazky_brezno/'
+ZRAZKY_SK_DIR = TOPDIR + r'zrazky_sk/'
+HLADINY_SK_DIR = TOPDIR + r'hladiny_sk/'
+PRIETOKY_SK_DIR = TOPDIR + r'prietoky_sk/'
+TEMPTESTFILE = TEPLOTY_SK_DIR + '2025-07-30-15-00.html'
+UHRNTESTFILE = ZRAZKY_BREZNO_DIR + '2025-07-30-23-45.html'
 
 
 # Read all tables from an HTML file or string
@@ -25,8 +26,7 @@ def extract_tables_from_html(html_content, tableno = 0):
     :param html_content: str, HTML content containing tables
     :return: list of DataFrames
     """
-    tables = pd.read_html(html_content)    
-    # for i, table in enumerate(tables):
+    tables = pd.read_html(html_content)        # for i, table in enumerate(tables):
     #     print(f"Table {i}:\n", table)
     
     
@@ -85,7 +85,7 @@ def to_num(df, cols):
 
 def teploty():
     df = pd.DataFrame()
-    htmlfiles = Path(TEMPDIR).glob('*.html')
+    htmlfiles = Path(TEPLOTY_SK_DIR).glob('*.html')
     for file_path in htmlfiles:
         if file_path.stat().st_size > 0:
             print(file_path)
@@ -106,13 +106,13 @@ def teploty():
     df.sort_values(by=['datetime'], inplace=True)
     
     brezno = df[df['Stanica'] == 'Brezno']
-    save_frame(df, TEMPDIR, 'teplotyx')
-    save_frame(brezno, TEMPDIR, 'teploty_breznox')
+    save_frame(df, TEPLOTY_SK_DIR, 'teplotyx')
+    save_frame(brezno, TEPLOTY_SK_DIR, 'teploty_breznox')
     print('done')   
  
 def uhrny():   
     df = pd.DataFrame()
-    htmlfiles = Path(UHRNDIR).glob('*.html')
+    htmlfiles = Path(ZRAZKY_BREZNO_DIR).glob('*.html')
     for file_path in htmlfiles:
         print(file_path)
         table = extract_tables_from_html(file_path,1)
@@ -120,11 +120,11 @@ def uhrny():
     
     df['datetime'] = pd.to_datetime(df['Čas merania'], format='%d.%m.%Y %H:%M')
     df = df.drop_duplicates(df, keep='first').sort_values(by='datetime')
-    save_frame(df, UHRNDIR, 'uhrny')    
+    save_frame(df, ZRAZKY_BREZNO_DIR, 'uhrny')    
     
 def uhrnycelk():   
     df = pd.DataFrame()
-    htmlfiles = Path(UHRNYDIR).glob('*.html')
+    htmlfiles = Path(ZRAZKY_SK_DIR).glob('*.html')
     for file_path in htmlfiles:
         if file_path.stat().st_size > 0:
             print(file_path)
@@ -136,11 +136,11 @@ def uhrnycelk():
     df = df[df['Čas merania'] != 'Priemery:']
     df['datetime'] = pd.to_datetime(df['Čas merania'], format='%d.%m.%Y %H:%M')
     df = df.drop_duplicates(df, keep='first').sort_values(by='Čas merania')
-    save_frame(df, UHRNYDIR, 'uhrnycelk')    
+    save_frame(df, ZRAZKY_SK_DIR, 'uhrnycelk')    
     
 def vodomerne_stanice():   
     df = pd.DataFrame()
-    htmlfiles = Path(VODOMERDIR).glob('*.html')
+    htmlfiles = Path(HLADINY_SK_DIR).glob('*.html')
     for file_path in htmlfiles:
         if file_path.stat().st_size > 0:
             print(file_path)
@@ -151,12 +151,12 @@ def vodomerne_stanice():
             print(f"!!!Empty file!!!: {file_path}")
     df['datetime'] = pd.to_datetime(df['Čas merania'], format='%d.%m.%Y %H:%M')
     df = df.drop_duplicates(df, keep='first').sort_values(by='datetime')
-    save_frame(df, VODOMERDIR, 'vodomerne_stanice')    
+    save_frame(df, HLADINY_SK_DIR, 'vodomerne_stanice')    
     
 
 def hydrometricke_stanice():   
     df = pd.DataFrame()
-    htmlfiles = Path(HYDROMETERDIR).glob('*.html')
+    htmlfiles = Path(PRIETOKY_SK_DIR).glob('*.html')
     for file_path in htmlfiles:
         if file_path.stat().st_size > 0:
             print(file_path)
@@ -175,7 +175,7 @@ def hydrometricke_stanice():
     df.Z = df.Z.replace('//', 0)
     df = to_num(df, ['H','dH','Q','Tvo','Tvz','Z','QMN'])
     df = df.drop_duplicates(df, keep='first').sort_values(by='datetime')
-    save_frame(df, HYDROMETERDIR, 'hydrometricke_stanice')
+    save_frame(df, PRIETOKY_SK_DIR, 'hydrometricke_stanice')
 
 hydrometricke_stanice()
 vodomerne_stanice()
