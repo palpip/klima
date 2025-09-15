@@ -106,8 +106,8 @@ def teploty():
     df.sort_values(by=['datetime'], inplace=True)
     
     brezno = df[df['Stanica'] == 'Brezno']
-    save_frame(df, TEPLOTY_SK_DIR, 'teplotyx')
-    save_frame(brezno, TEPLOTY_SK_DIR, 'teploty_breznox')
+    save_frame(df, TEPLOTY_SK_DIR, 'teploty')
+    save_frame(brezno, TEPLOTY_SK_DIR, 'teploty_brezno')
     print('done')   
  
 def uhrny():   
