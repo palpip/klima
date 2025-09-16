@@ -10,13 +10,14 @@ Created on Mon Aug  5 10:20:00 2024
 import pandas as pd
 import re
 import openpyxl
-import datetime
+import datetime as dt
 import sqlite3
 import pyarrow
 import logging
 
 from pathlib import Path
 from config import *
+import logging
 
 # nastavenie logovania
 # logovanie do log.log - chyby/debug
@@ -104,13 +105,13 @@ def teploty():
             table.Tlak = table.Tlak.str.replace(' hPa','')
             regex_pattern = r'sia - (.*) - (.*) LSE'
             [datum,cas] = extract_date_from_html(file_path, regex_pattern)
-            table['datetime'] = datetime.datetime.strptime(f'{datum} {cas}','%d.%m.%Y %H:%M')
+            table['Timestamp'] = dt.datetime.strptime(f'{datum} {cas}','%d.%m.%Y %H:%M')
             df = pd.concat([df, table])
             # print(df)
         else:
             logger.error(f"Súbor {file_path} je prázdny")
     df.drop_duplicates(inplace=True)
-    df.sort_values(by=['datetime'], inplace=True)
+    df.sort_values(by=['Timestamp'], inplace=True)
     
     brezno = df[df['Stanica'] == 'Brezno']
     save_frame(df, TEPLOTY_SK_DIR, 'teploty')
@@ -126,8 +127,8 @@ def uhrny():
         table = extract_tables_from_html(file_path,1)
         df = pd.concat([df, table])
     
-    df['datetime'] = pd.to_datetime(df['Čas merania'], format='%d.%m.%Y %H:%M')
-    df = df.drop_duplicates(df, keep='first').sort_values(by='datetime')
+    df['Timestamp'] = pd.to_datetime(df['Čas merania'], format='%d.%m.%Y %H:%M')
+    df = df.drop_duplicates(df, keep='first').sort_values(by='Timestamp')
     save_frame(df, ZRAZKY_BREZNO_DIR, 'zrazky_brezno')    
     logger.info(f"ZRAZKY_BREZNO - {len(df)} riadkov")
     
@@ -144,7 +145,7 @@ def uhrnycelk():
         else:
             logger.error(f"Súbor {file_path} je prázdny")
     df = df[df['Čas merania'] != 'Priemery:']
-    df['datetime'] = pd.to_datetime(df['Čas merania'], format='%d.%m.%Y %H:%M')
+    df['Timestamp'] = pd.to_datetime(df['Čas merania'], format='%d.%m.%Y %H:%M')
     df = df.drop_duplicates(df, keep='first').sort_values(by='Čas merania')
     save_frame(df, ZRAZKY_SK_DIR, 'zrazky_sk')    
     logger.info(f"ZRAZKY_SK - {len(df)} riadkov")
@@ -160,8 +161,8 @@ def vodomerne_stanice():
                 df = pd.concat([df, tbl])
         else:
             logger.error(f"Súbor {file_path} je prázdny")
-    df['datetime'] = pd.to_datetime(df['Čas merania'], format='%d.%m.%Y %H:%M')
-    df = df.drop_duplicates(df, keep='first').sort_values(by='datetime')
+    df['Timestamp'] = pd.to_datetime(df['Čas merania'], format='%d.%m.%Y %H:%M')
+    df = df.drop_duplicates(df, keep='first').sort_values(by='Timestamp')
     save_frame(df, HLADINY_SK_DIR, 'hladiny_sk')    
     logger.info(f"HLADINY_SK - {len(df)} riadkov")
     
@@ -177,7 +178,7 @@ def hydrometricke_stanice():
             regex_pattern = r'(?:<.*?>)?\s?(\d{1,2}\.\d{1,2}\.\d{4}) o (\d{1,2}:\d\d)'
             [datum,cas] = extract_date_from_html(file_path, regex_pattern)
             table=tables[0]
-            table['datetime'] = datetime.datetime.strptime(f'{datum} {cas}','%d.%m.%Y %H:%M')
+            table['Timestamp'] = dt.datetime.strptime(f'{datum} {cas}','%d.%m.%Y %H:%M')
             df = pd.concat([df, table])
         else:
             logger.error(f"Súbor {file_path} je prázdny")
@@ -187,26 +188,26 @@ def hydrometricke_stanice():
     df.Z = df.Z.replace('-', pd.NA)
     df.Z = df.Z.replace('//', 0)
     df = to_num(df, ['H','dH','Q','Tvo','Tvz','Z','QMN'])
-    df = df.drop_duplicates(df, keep='first').sort_values(by='datetime')
+    df = df.drop_duplicates(df, keep='first').sort_values(by='Timestamp')
     save_frame(df, PRIETOKY_SK_DIR, 'hydrometricke_stanice')
     logger.info(f"PRIETOKY_SK - {len(df)} riadkov")
     
 
-start = datetime.datetime.now()
+start = dt.datetime.now()
 hydrometricke_stanice()
-logger.info(f"Celkový čas spracovania: {datetime.datetime.now() - start}")
-start = datetime.datetime.now()
+logger.info(f"Celkový čas spracovania: {dt.datetime.now() - start}")
+start = dt.datetime.now()
 
 vodomerne_stanice()
-logger.info(f"Celkový čas spracovania: {datetime.datetime.now() - start}")
-start = datetime.datetime.now()
+logger.info(f"Celkový čas spracovania: {dt.datetime.now() - start}")
+start = dt.datetime.now()
 uhrnycelk()    
-logger.info(f"Celkový čas spracovania: {datetime.datetime.now() - start}")
-start = datetime.datetime.now()
+logger.info(f"Celkový čas spracovania: {dt.datetime.now() - start}")
+start = dt.datetime.now()
 uhrny()        
-logger.info(f"Celkový čas spracovania: {datetime.datetime.now() - start}")
-start = datetime.datetime.now()
+logger.info(f"Celkový čas spracovania: {dt.datetime.now() - start}")
+start = dt.datetime.now()
 teploty()
-logger.info(f"Celkový čas spracovania: {datetime.datetime.now() - start}")
-start = datetime.datetime.now()
+logger.info(f"Celkový čas spracovania: {dt.datetime.now() - start}")
+start = dt.datetime.now()
 print('done')
