@@ -23,7 +23,7 @@ import logging
 # logovanie do log.log - chyby/debug
 # logovanie do inf.log - informacie
 
-LOGFILE = "log.log"
+LOGFILE = "log1.log"
 LOGFILE_INF = "inf.log" 
 logger=logging.getLogger('log')
 logger.addHandler(logging.FileHandler(TOPDIR + LOGFILE, mode='w'))
