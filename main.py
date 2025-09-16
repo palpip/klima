@@ -2,7 +2,7 @@
 import pandas as pd
 import re
 import openpyxl
-import datetime
+import datetime as dt
 import sqlite3
 import pyarrow
 from pathlib import Path
@@ -77,13 +77,13 @@ def teploty():
             table.Tlak = table.Tlak.str.replace(' hPa','')
             regex_pattern = r'sia - (.*) - (.*) LSE'
             [datum,cas] = extract_date_from_html(file_path, regex_pattern)
-            table['datetime'] = datetime.datetime.strptime(f'{datum} {cas}','%d.%m.%Y %H:%M')
+            table['Timestamp'] = dt.datetime.strptime(f'{datum} {cas}','%d.%m.%Y %H:%M')
             df = pd.concat([df, table])
             # print(df)
         else:
             print(f"!!!Empty file!!!: {file_path}")
     df.drop_duplicates(inplace=True)
-    df.sort_values(by=['datetime'], inplace=True)
+    df.sort_values(by=['Timestamp'], inplace=True)
     
     brezno = df[df['Stanica'] == 'Brezno']
     save_frame(df, TEPLOTY_SK_DIR, 'teploty')
@@ -98,8 +98,8 @@ def uhrny():
         table = extract_tables_from_html(file_path,1)
         df = pd.concat([df, table])
     
-    df['datetime'] = pd.to_datetime(df['Čas merania'], format='%d.%m.%Y %H:%M')
-    df = df.drop_duplicates(df, keep='first').sort_values(by='datetime')
+    df['Timestamp'] = pd.to_datetime(df['Čas merania'], format='%d.%m.%Y %H:%M')
+    df = df.drop_duplicates(df, keep='first').sort_values(by='Timestamp')
     save_frame(df, ZRAZKY_BREZNO_DIR, 'zrazky_brezno')    
     
 def uhrnycelk():   
@@ -114,7 +114,7 @@ def uhrnycelk():
         else:
             print(f"!!!Empty file!!!: {file_path}")
     df = df[df['Čas merania'] != 'Priemery:']
-    df['datetime'] = pd.to_datetime(df['Čas merania'], format='%d.%m.%Y %H:%M')
+    df['Timestamp'] = pd.to_datetime(df['Čas merania'], format='%d.%m.%Y %H:%M')
     df = df.drop_duplicates(df, keep='first').sort_values(by='Čas merania')
     save_frame(df, ZRAZKY_SK_DIR, 'zrazky_sk')    
     
@@ -129,8 +129,8 @@ def vodomerne_stanice():
                 df = pd.concat([df, tbl])
         else:
             print(f"!!!Empty file!!!: {file_path}")
-    df['datetime'] = pd.to_datetime(df['Čas merania'], format='%d.%m.%Y %H:%M')
-    df = df.drop_duplicates(df, keep='first').sort_values(by='datetime')
+    df['Timestamp'] = pd.to_datetime(df['Čas merania'], format='%d.%m.%Y %H:%M')
+    df = df.drop_duplicates(df, keep='first').sort_values(by='Timestamp')
     save_frame(df, HLADINY_SK_DIR, 'hladiny_sk')    
     
 
@@ -144,7 +144,7 @@ def hydrometricke_stanice():
             regex_pattern = r'(?:<.*?>)?\s?(\d{1,2}\.\d{1,2}\.\d{4}) o (\d{1,2}:\d\d)'
             [datum,cas] = extract_date_from_html(file_path, regex_pattern)
             table=tables[0]
-            table['datetime'] = datetime.datetime.strptime(f'{datum} {cas}','%d.%m.%Y %H:%M')
+            table['Timestamp'] = dt.datetime.strptime(f'{datum} {cas}','%d.%m.%Y %H:%M')
             df = pd.concat([df, table])
         else:
             print(f"!!!Empty file!!!: {file_path}")
@@ -154,7 +154,7 @@ def hydrometricke_stanice():
     df.Z = df.Z.replace('-', pd.NA)
     df.Z = df.Z.replace('//', 0)
     df = to_num(df, ['H','dH','Q','Tvo','Tvz','Z','QMN'])
-    df = df.drop_duplicates(df, keep='first').sort_values(by='datetime')
+    df = df.drop_duplicates(df, keep='first').sort_values(by='Timestamp')
     save_frame(df, PRIETOKY_SK_DIR, 'hydrometricke_stanice')
 
 hydrometricke_stanice()
