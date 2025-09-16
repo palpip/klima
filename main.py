@@ -1,3 +1,11 @@
+#!/usr/bin/env python3
+# -*- coding: utf-8 -*-
+'''
+Module for SHMU data and databases processing
+
+Modul pre spracovanie dat SHMU a databaz
+Created on Mon Aug  5 10:20:00 2024
+'''
 
 import pandas as pd
 import re
@@ -5,15 +13,34 @@ import openpyxl
 import datetime
 import sqlite3
 import pyarrow
-from pathlib import Path
+import logging
 
+from pathlib import Path
 from config import *
+
+# nastavenie logovania
+# logovanie do log.log - chyby/debug
+# logovanie do inf.log - informacie
+
+LOGFILE = "log.log"
+LOGFILE_INF = "inf.log" 
+logger=logging.getLogger('log')
+logger.addHandler(logging.FileHandler(TOPDIR + LOGFILE, mode='w'))
+logger_inf = logging.getLogger('inf')
+logger_inf.addHandler(logging.FileHandler(TOPDIR + LOGFILE_INF, mode='w'))
+
+logger.setLevel(logging.DEBUG)
+logger_inf.setLevel(logging.DEBUG)
 
 
 
 def extract_tables_from_html(html_content, tableno = 0):
     """Extract all tables from an HTML content string.
     :param html_content: str, HTML content containing tables
+    :param tableno: int, index of the table to extract 
+                    (0) for first table with multilevel header
+                    (1) for second table with single level header
+                    (100) for all tables as list of DataFrames
     :return: list of DataFrames
     """
     tables = pd.read_html(html_content)        # for i, table in enumerate(tables):
@@ -81,15 +108,16 @@ def teploty():
             df = pd.concat([df, table])
             # print(df)
         else:
-            print(f"!!!Empty file!!!: {file_path}")
+            logger.error(f"Súbor {file_path} je prázdny")
     df.drop_duplicates(inplace=True)
     df.sort_values(by=['datetime'], inplace=True)
     
     brezno = df[df['Stanica'] == 'Brezno']
     save_frame(df, TEPLOTY_SK_DIR, 'teploty')
     save_frame(brezno, TEPLOTY_SK_DIR, 'teploty_brezno')
-    print('done')   
- 
+    logger.info(f"TEPLOTY_SK - {len(df)} riadkov")
+    logger.info(f"TEPLOTY_BREZNO - {len(brezno)} riadkov")
+    
 def uhrny():   
     df = pd.DataFrame()
     htmlfiles = Path(ZRAZKY_BREZNO_DIR).glob('*.html')
@@ -101,6 +129,8 @@ def uhrny():
     df['datetime'] = pd.to_datetime(df['Čas merania'], format='%d.%m.%Y %H:%M')
     df = df.drop_duplicates(df, keep='first').sort_values(by='datetime')
     save_frame(df, ZRAZKY_BREZNO_DIR, 'zrazky_brezno')    
+    logger.info(f"ZRAZKY_BREZNO - {len(df)} riadkov")
+    
     
 def uhrnycelk():   
     df = pd.DataFrame()
@@ -112,11 +142,12 @@ def uhrnycelk():
             for tbl in tables:
                 df = pd.concat([df, tbl])
         else:
-            print(f"!!!Empty file!!!: {file_path}")
+            logger.error(f"Súbor {file_path} je prázdny")
     df = df[df['Čas merania'] != 'Priemery:']
     df['datetime'] = pd.to_datetime(df['Čas merania'], format='%d.%m.%Y %H:%M')
     df = df.drop_duplicates(df, keep='first').sort_values(by='Čas merania')
     save_frame(df, ZRAZKY_SK_DIR, 'zrazky_sk')    
+    logger.info(f"ZRAZKY_SK - {len(df)} riadkov")
     
 def vodomerne_stanice():   
     df = pd.DataFrame()
@@ -128,10 +159,11 @@ def vodomerne_stanice():
             for tbl in tables:
                 df = pd.concat([df, tbl])
         else:
-            print(f"!!!Empty file!!!: {file_path}")
+            logger.error(f"Súbor {file_path} je prázdny")
     df['datetime'] = pd.to_datetime(df['Čas merania'], format='%d.%m.%Y %H:%M')
     df = df.drop_duplicates(df, keep='first').sort_values(by='datetime')
     save_frame(df, HLADINY_SK_DIR, 'hladiny_sk')    
+    logger.info(f"HLADINY_SK - {len(df)} riadkov")
     
 
 def hydrometricke_stanice():   
@@ -141,13 +173,14 @@ def hydrometricke_stanice():
         if file_path.stat().st_size > 0:
             print(file_path)
             tables = extract_tables_from_html(file_path,100)
+            #pattern pre datum a cas
             regex_pattern = r'(?:<.*?>)?\s?(\d{1,2}\.\d{1,2}\.\d{4}) o (\d{1,2}:\d\d)'
             [datum,cas] = extract_date_from_html(file_path, regex_pattern)
             table=tables[0]
             table['datetime'] = datetime.datetime.strptime(f'{datum} {cas}','%d.%m.%Y %H:%M')
             df = pd.concat([df, table])
         else:
-            print(f"!!!Empty file!!!: {file_path}")
+            logger.error(f"Súbor {file_path} je prázdny")
     #cistenie dat
     df.columns = df.columns.droplevel(1) # odstranenie viacriadkovych hlaviciek 
     df = df.rename(columns={'∆H': 'dH', 'QM,N' : 'QMN'}) # premenovanie stlpca
@@ -156,10 +189,24 @@ def hydrometricke_stanice():
     df = to_num(df, ['H','dH','Q','Tvo','Tvz','Z','QMN'])
     df = df.drop_duplicates(df, keep='first').sort_values(by='datetime')
     save_frame(df, PRIETOKY_SK_DIR, 'hydrometricke_stanice')
+    logger.info(f"PRIETOKY_SK - {len(df)} riadkov")
+    
 
+start = datetime.datetime.now()
 hydrometricke_stanice()
+logger.info(f"Celkový čas spracovania: {datetime.datetime.now() - start}")
+start = datetime.datetime.now()
+
 vodomerne_stanice()
+logger.info(f"Celkový čas spracovania: {datetime.datetime.now() - start}")
+start = datetime.datetime.now()
 uhrnycelk()    
+logger.info(f"Celkový čas spracovania: {datetime.datetime.now() - start}")
+start = datetime.datetime.now()
 uhrny()        
+logger.info(f"Celkový čas spracovania: {datetime.datetime.now() - start}")
+start = datetime.datetime.now()
 teploty()
+logger.info(f"Celkový čas spracovania: {datetime.datetime.now() - start}")
+start = datetime.datetime.now()
 print('done')
