@@ -7,29 +7,16 @@ import sqlite3
 import pyarrow
 from pathlib import Path
 
-TOPDIR = r'/home/pp/program/jupyter/SHMU/zber/'
-TEPLOTY_SK_DIR = TOPDIR + r'teploty_sk/'
-ZRAZKY_BREZNO_DIR = TOPDIR + r'zrazky_brezno/'
-ZRAZKY_SK_DIR = TOPDIR + r'zrazky_sk/'
-HLADINY_SK_DIR = TOPDIR + r'hladiny_sk/'
-PRIETOKY_SK_DIR = TOPDIR + r'prietoky_sk/'
-TEMPTESTFILE = TEPLOTY_SK_DIR + '2025-07-30-15-00.html'
-UHRNTESTFILE = ZRAZKY_BREZNO_DIR + '2025-07-30-23-45.html'
+from config import *
 
 
-# Read all tables from an HTML file or string
-# tables = pd.read_tblhtml('your_file.html')  # or pd.read_html(html_string)
 
-# Access tables as DataFrames
 def extract_tables_from_html(html_content, tableno = 0):
     """Extract all tables from an HTML content string.
     :param html_content: str, HTML content containing tables
     :return: list of DataFrames
     """
     tables = pd.read_html(html_content)        # for i, table in enumerate(tables):
-    #     print(f"Table {i}:\n", table)
-    
-    
     if tableno == 0:
         tbl = tables[tableno]
         tbl.columns = tbl.columns.droplevel(0)
@@ -48,7 +35,6 @@ def extract_date_from_html(htmlfile, regex_pattern):
     """
     with open(htmlfile, 'r') as file:
         retval = re.findall(regex_pattern, file.read())
-    
     return [retval[0][0], retval[0][1]] 
     
 def find_files_with_extension(directory, extension):
@@ -60,12 +46,6 @@ def find_files_with_extension(directory, extension):
     """
     return Path(directory).rglob(f'*{extension}')
 
-# Example usage:
-# for file_path in find_files_with_extension(TOPDIR, '.html'):
-#     print(file_path)
-
-# extract_tables_from_html(TEMPTESTFILE)  
-# extract_tables_from_html(UHRNTESTFILE)
 
 def save_frame(df, dirname, dfname):
     '''ulozi dataframes v adresari dirname vo formate
@@ -120,7 +100,7 @@ def uhrny():
     
     df['datetime'] = pd.to_datetime(df['Čas merania'], format='%d.%m.%Y %H:%M')
     df = df.drop_duplicates(df, keep='first').sort_values(by='datetime')
-    save_frame(df, ZRAZKY_BREZNO_DIR, 'uhrny')    
+    save_frame(df, ZRAZKY_BREZNO_DIR, 'zrazky_brezno')    
     
 def uhrnycelk():   
     df = pd.DataFrame()
@@ -136,7 +116,7 @@ def uhrnycelk():
     df = df[df['Čas merania'] != 'Priemery:']
     df['datetime'] = pd.to_datetime(df['Čas merania'], format='%d.%m.%Y %H:%M')
     df = df.drop_duplicates(df, keep='first').sort_values(by='Čas merania')
-    save_frame(df, ZRAZKY_SK_DIR, 'uhrnycelk')    
+    save_frame(df, ZRAZKY_SK_DIR, 'zrazky_sk')    
     
 def vodomerne_stanice():   
     df = pd.DataFrame()
@@ -151,7 +131,7 @@ def vodomerne_stanice():
             print(f"!!!Empty file!!!: {file_path}")
     df['datetime'] = pd.to_datetime(df['Čas merania'], format='%d.%m.%Y %H:%M')
     df = df.drop_duplicates(df, keep='first').sort_values(by='datetime')
-    save_frame(df, HLADINY_SK_DIR, 'vodomerne_stanice')    
+    save_frame(df, HLADINY_SK_DIR, 'hladiny_sk')    
     
 
 def hydrometricke_stanice():   
