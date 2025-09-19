@@ -20,6 +20,7 @@ import pyarrow
 import logging
 from pathlib import Path
 
+from main import extract_tables_from_html, extract_date_from_html
 from config import *
 
 LOGFILE = "log.log"
@@ -51,16 +52,6 @@ def set_logging(logdir):
 
     logger.info(f'Start err logging to {LOGFILE}')
     logger_inf.info(f'Start inf logging to {LOGFILE_INF}'          )
-
-def extract_date_from_html(htmlfile, regex_pattern):
-    """Extract date from HTML content.
-    :param html_content: str, HTML content containing date information
-    :param regex_pattern: str, regex pattern to match the date
-    :return: extracted date and time as a list    
-    """
-    with open(htmlfile, 'r') as file:
-        retval = re.findall(regex_pattern, file.read())
-    return [retval[0][0], retval[0][1]] 
     
 def teploty():
     '''spracuje vsetky html subory v adresari TEPLOTY_SK_DIR
@@ -107,7 +98,7 @@ def hydrometricke_stanice():
             regex_pattern = r'(?:<.*?>)?\s?(\d{1,2}\.\d{1,2}\.\d{4}) o (\d{1,2}:\d\d)'
             [datum,cas] = extract_date_from_html(file_path, regex_pattern)
             table=tables[0]
-            table['datetime'] = datetime.datetime.strptime(f'{datum} {cas}','%d.%m.%Y %H:%M')
+            table['datetime'] = dt.datetime.strptime(f'{datum} {cas}','%d.%m.%Y %H:%M')
             df = pd.concat([df, table])
         else:
             print(f"!!!Empty file!!!: {file_path}")
