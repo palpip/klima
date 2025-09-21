@@ -63,7 +63,8 @@ def teploty():
     htmlfiles = Path(TEPLOTY_SK_DIR).glob('*00-45.html')
     for file_path in htmlfiles:
         if file_path.stat().st_size > 0:
-            print(file_path)
+            month_from_filename = int(re.findall(r'(\d{4})-(\d{2})-\d{2}.*', file_path.name)[0][1])
+            print(file_path, month_from_filename)
             tables = pd.read_html(file_path)
             table = tables[0]
             table.columns = table.columns.droplevel(0)
@@ -72,6 +73,8 @@ def teploty():
             table.Tlak = table.Tlak.str.replace(' hPa','')
             regex_pattern = r'sia - (.*) - (.*) LSE'
             [datum,cas] = extract_date_from_html(file_path, regex_pattern)
+            if month_from_filename != int(datum.split('.')[1]):     
+                print(f"Chybný mesiac v názve súboru {file_path} - {month_from_filename} != {datum.split('.')[1]}")
             table['datetime'] = dt.datetime.strptime(f'{datum} {cas}','%d.%m.%Y %H:%M')
             df = pd.concat([df, table])
             # print(df)
@@ -88,6 +91,25 @@ def teploty():
     # save_frame(brezno, TEPLOTY_SK_DIR, 'teploty_brezno')
     print('done')
 
+def uhrnycelk():   
+    df = pd.DataFrame()
+    htmlfiles = Path(ZRAZKY_SK_DIR).glob('*.html')
+    for file_path in htmlfiles:
+        if file_path.stat().st_size > 0:
+            print(file_path)
+            tables = extract_tables_from_html(file_path,100)
+            for tbl in tables:
+                df = pd.concat([df, tbl])
+        else:
+            logger.error(f"Súbor {file_path} je prázdny")
+    df = df[df['Čas merania'] != 'Priemery:']
+    month_from_filename = int(re.findall(r'(\d{4})-(\d{2})-\d{2}.*', file_path.name)[0][1])
+
+    df['datetime'] = pd.to_datetime(df['Čas merania'], format='%d.%m.%Y %H:%M')
+    df = df.drop_duplicates(df, keep='first').sort_values(by='Čas merania')
+    # save_frame(df, ZRAZKY_SK_DIR, 'zrazky_sk')    
+    logger.info(f"ZRAZKY_SK - {len(df)} riadkov")
+    
 def hydrometricke_stanice():   
     df = pd.DataFrame()
     htmlfiles = Path(PRIETOKY_SK_DIR).glob('*.html')
@@ -98,7 +120,12 @@ def hydrometricke_stanice():
             regex_pattern = r'(?:<.*?>)?\s?(\d{1,2}\.\d{1,2}\.\d{4}) o (\d{1,2}:\d\d)'
             [datum,cas] = extract_date_from_html(file_path, regex_pattern)
             table=tables[0]
-            table['datetime'] = dt.datetime.strptime(f'{datum} {cas}','%d.%m.%Y %H:%M')
+            table['datetime'] = (dtime := dt.datetime.strptime(f'{datum} {cas}','%d.%m.%Y %H:%M'))
+
+            month_from_filename = int(re.findall(r'(\d{4})-(\d{2})-\d{2}.*', file_path.name)[0][1])
+            if month_from_filename != int(dtime.month):      
+                print(f"Chybný mesiac v názve súboru {file_path} - {month_from_filename} != {dtime.month}")
+
             df = pd.concat([df, table])
         else:
             print(f"!!!Empty file!!!: {file_path}")
@@ -119,15 +146,16 @@ def create_data_dirs(year = 2025, month = 6, topdir = TOPDATADIR, datadirs=DATAD
     for dirname in datadirs:
         Path(topdir + dirname).mkdir(parents=True, exist_ok=True)   
 
-create_data_dirs(2025, 7)
-create_data_dirs(2025, 8)
-create_data_dirs(2025, 9)
-create_data_dirs(2025, 10)
-# set_logging(TOPDIR)
-# logger_inf.info('Start teploty()')
-# logger.info('Start  teploty()')
-# teploty()
-# set_logging(TOPDIR)
-# logger_inf.info('End   teploty()')
-# logger.info('End    teploty()')
+# create_data_dirs(2025, 7)
+# create_data_dirs(2025, 8)
+# create_data_dirs(2025, 9)
+# create_data_dirs(2025, 10)
+set_logging(TOPDIR)
+logger_inf.info('Start teploty()')
+logger.info('Start  teploty()')
+# hydrometricke_stanice()   
+teploty()
+set_logging(TOPDIR)
+logger_inf.info('End   teploty()')
+logger.info('End    teploty()')
 

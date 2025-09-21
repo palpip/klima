@@ -29,7 +29,6 @@ logger=logging.getLogger('log')
 logger.addHandler(logging.FileHandler(TOPDIR + LOGFILE, mode='w'))
 logger_inf = logging.getLogger('inf')
 logger_inf.addHandler(logging.FileHandler(TOPDIR + LOGFILE_INF, mode='w'))
-
 logger.setLevel(logging.DEBUG)
 logger_inf.setLevel(logging.DEBUG)
 
@@ -105,16 +104,17 @@ def teploty():
             table.Tlak = table.Tlak.str.replace(' hPa','')
             regex_pattern = r'sia - (.*) - (.*) LSE'
             [datum,cas] = extract_date_from_html(file_path, regex_pattern)
-            table['datetime'] = dt.datetime.strptime(f'{datum} {cas}','%d.%m.%Y %H:%M')
+            table['Cas_CET'] = dt.datetime.strptime(f'{datum} {cas}','%d.%m.%Y %H:%M')
+            table['file'] = file_path.name.split('.')[0]
             df = pd.concat([df, table])
             # print(df)
         else:
             logger.error(f"Súbor {file_path} je prázdny")
     df.drop_duplicates(inplace=True)
-    df.sort_values(by=['datetime'], inplace=True)
+    df.sort_values(by=['Cas_CET'], inplace=True)
     
     brezno = df[df['Stanica'] == 'Brezno']
-    save_frame(df, TEPLOTY_SK_DIR, 'teploty')
+    save_frame(df, TEPLOTY_SK_DIR, 'teploty_sk')
     save_frame(brezno, TEPLOTY_SK_DIR, 'teploty_brezno')
     logger.info(f"TEPLOTY_SK - {len(df)} riadkov")
     logger.info(f"TEPLOTY_BREZNO - {len(brezno)} riadkov")
@@ -125,10 +125,11 @@ def uhrny():
     for file_path in htmlfiles:
         print(file_path)
         table = extract_tables_from_html(file_path,1)
+        table['file'] = file_path.name.split('.')[0]
         df = pd.concat([df, table])
     
-    df['datetime'] = pd.to_datetime(df['Čas merania'], format='%d.%m.%Y %H:%M')
-    df = df.drop_duplicates(df, keep='first').sort_values(by='datetime')
+    df['Cas_CET'] = pd.to_datetime(df['Čas merania'], format='%d.%m.%Y %H:%M')
+    df = df.drop_duplicates(df, keep='first').sort_values(by='Cas_CET')
     save_frame(df, ZRAZKY_BREZNO_DIR, 'zrazky_brezno')    
     logger.info(f"ZRAZKY_BREZNO - {len(df)} riadkov")
     
@@ -140,12 +141,13 @@ def uhrnycelk():
         if file_path.stat().st_size > 0:
             print(file_path)
             tables = extract_tables_from_html(file_path,100)
-            for tbl in tables:
-                df = pd.concat([df, tbl])
+            for table in tables:
+                table['file'] = file_path.name.split('.')[0]
+                df = pd.concat([df, table])
         else:
             logger.error(f"Súbor {file_path} je prázdny")
     df = df[df['Čas merania'] != 'Priemery:']
-    df['datetime'] = pd.to_datetime(df['Čas merania'], format='%d.%m.%Y %H:%M')
+    df['Cas_CET'] = pd.to_datetime(df['Čas merania'], format='%d.%m.%Y %H:%M')
     df = df.drop_duplicates(df, keep='first').sort_values(by='Čas merania')
     save_frame(df, ZRAZKY_SK_DIR, 'zrazky_sk')    
     logger.info(f"ZRAZKY_SK - {len(df)} riadkov")
@@ -157,12 +159,13 @@ def vodomerne_stanice():
         if file_path.stat().st_size > 0:
             print(file_path)
             tables = extract_tables_from_html(file_path,100)
-            for tbl in tables:
-                df = pd.concat([df, tbl])
+            for table in tables:
+                table['file'] = file_path.name.split('.')[0]
+                df = pd.concat([df, table])
         else:
             logger.error(f"Súbor {file_path} je prázdny")
-    df['datetime'] = pd.to_datetime(df['Čas merania'], format='%d.%m.%Y %H:%M')
-    df = df.drop_duplicates(df, keep='first').sort_values(by='datetime')
+    df['Cas_CET'] = pd.to_datetime(df['Čas merania'], format='%d.%m.%Y %H:%M')
+    df = df.drop_duplicates(df, keep='first').sort_values(by='Cas_CET')
     save_frame(df, HLADINY_SK_DIR, 'hladiny_sk')    
     logger.info(f"HLADINY_SK - {len(df)} riadkov")
     
@@ -178,7 +181,8 @@ def hydrometricke_stanice():
             regex_pattern = r'(?:<.*?>)?\s?(\d{1,2}\.\d{1,2}\.\d{4}) o (\d{1,2}:\d\d)'
             [datum,cas] = extract_date_from_html(file_path, regex_pattern)
             table=tables[0]
-            table['datetime'] = dt.datetime.strptime(f'{datum} {cas}','%d.%m.%Y %H:%M')
+            table['Cas_CET'] = dt.datetime.strptime(f'{datum} {cas}','%d.%m.%Y %H:%M')
+            table['file'] = file_path.name.split('.')[0]
             df = pd.concat([df, table])
         else:
             logger.error(f"Súbor {file_path} je prázdny")
@@ -188,26 +192,28 @@ def hydrometricke_stanice():
     df.Z = df.Z.replace('-', pd.NA)
     df.Z = df.Z.replace('//', 0)
     df = to_num(df, ['H','dH','Q','Tvo','Tvz','Z','QMN'])
-    df = df.drop_duplicates(df, keep='first').sort_values(by='datetime')
-    save_frame(df, PRIETOKY_SK_DIR, 'hydrometricke_stanice')
+    df = df.drop_duplicates(df, keep='first').sort_values(by='Cas_CET')
+    save_frame(df, PRIETOKY_SK_DIR, 'prietoky_sk')
     logger.info(f"PRIETOKY_SK - {len(df)} riadkov")
     
+def main():
+    start = dt.datetime.now()
+    hydrometricke_stanice()
+    logger.info(f"Celkový čas spracovania: {dt.datetime.now() - start}")
+    start = dt.datetime.now()
+    vodomerne_stanice()
+    logger.info(f"Celkový čas spracovania: {dt.datetime.now() - start}")
+    start = dt.datetime.now()
+    uhrnycelk()    
+    logger.info(f"Celkový čas spracovania: {dt.datetime.now() - start}")
+    start = dt.datetime.now()
+    uhrny()        
+    logger.info(f"Celkový čas spracovania: {dt.datetime.now() - start}")
+    start = dt.datetime.now()
+    teploty()
+    logger.info(f"Celkový čas spracovania: {dt.datetime.now() - start}")
+    start = dt.datetime.now()
+    print('done')
 
-start = dt.datetime.now()
-hydrometricke_stanice()
-logger.info(f"Celkový čas spracovania: {dt.datetime.now() - start}")
-start = dt.datetime.now()
-
-vodomerne_stanice()
-logger.info(f"Celkový čas spracovania: {dt.datetime.now() - start}")
-start = dt.datetime.now()
-uhrnycelk()    
-logger.info(f"Celkový čas spracovania: {dt.datetime.now() - start}")
-start = dt.datetime.now()
-uhrny()        
-logger.info(f"Celkový čas spracovania: {dt.datetime.now() - start}")
-start = dt.datetime.now()
-teploty()
-logger.info(f"Celkový čas spracovania: {dt.datetime.now() - start}")
-start = dt.datetime.now()
-print('done')
+if __name__ == "__main__":
+    main()  
