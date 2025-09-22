@@ -99,9 +99,9 @@ def teploty():
             tables = pd.read_html(file_path)
             table = tables[0]
             table.columns = table.columns.droplevel(0)
-            table.Teplota = table.Teplota.str.replace(' °C','')
-            table['Rýchlosť'] = table['Rýchlosť'].str.replace(' m/s','')
-            table.Tlak = table.Tlak.str.replace(' hPa','')
+            table.Teplota = table.Teplota.str.replace(' °C','').apply(pd.to_numeric, errors='coerce').astype(float)
+            table['Rýchlosť'] = table['Rýchlosť'].str.replace(' m/s','').apply(pd.to_numeric, errors='coerce').astype(float)
+            table.Tlak = table.Tlak.str.replace(' hPa','').apply(pd.to_numeric, errors='coerce').astype(float)
             regex_pattern = r'sia - (.*) - (.*) LSE'
             [datum,cas] = extract_date_from_html(file_path, regex_pattern)
             table['Cas_CET'] = dt.datetime.strptime(f'{datum} {cas}','%d.%m.%Y %H:%M')
@@ -134,7 +134,7 @@ def uhrny():
     logger.info(f"ZRAZKY_BREZNO - {len(df)} riadkov")
     
     
-def uhrnycelk():   
+def zrazky_sk():   
     df = pd.DataFrame()
     htmlfiles = Path(ZRAZKY_SK_DIR).glob('*.html')
     for file_path in htmlfiles:
@@ -152,7 +152,7 @@ def uhrnycelk():
     save_frame(df, ZRAZKY_SK_DIR, 'zrazky_sk')    
     logger.info(f"ZRAZKY_SK - {len(df)} riadkov")
     
-def vodomerne_stanice():   
+def hladiny_sk():   
     df = pd.DataFrame()
     htmlfiles = Path(HLADINY_SK_DIR).glob('*.html')
     for file_path in htmlfiles:
@@ -170,7 +170,7 @@ def vodomerne_stanice():
     logger.info(f"HLADINY_SK - {len(df)} riadkov")
     
 
-def hydrometricke_stanice():   
+def prietoky_sk():   
     df = pd.DataFrame()
     htmlfiles = Path(PRIETOKY_SK_DIR).glob('*.html')
     for file_path in htmlfiles:
@@ -198,21 +198,20 @@ def hydrometricke_stanice():
     
 def main():
     start = dt.datetime.now()
-    hydrometricke_stanice()
-    logger.info(f"Celkový čas spracovania: {dt.datetime.now() - start}")
+    prietoky_sk()
+    logger.info(f"{prietoky_sk.__name__}: Celkový čas spracovania: {dt.datetime.now() - start}")
     start = dt.datetime.now()
-    vodomerne_stanice()
-    logger.info(f"Celkový čas spracovania: {dt.datetime.now() - start}")
+    hladiny_sk()
+    logger.info(f"{hladiny_sk.__name__}: Celkový čas spracovania: {dt.datetime.now() - start}")
     start = dt.datetime.now()
-    uhrnycelk()    
-    logger.info(f"Celkový čas spracovania: {dt.datetime.now() - start}")
+    zrazky_sk()    
+    logger.info(f"{zrazky_sk.__name__}: Celkový čas spracovania: {dt.datetime.now() - start}")
     start = dt.datetime.now()
     uhrny()        
-    logger.info(f"Celkový čas spracovania: {dt.datetime.now() - start}")
+    logger.info(f"{uhrny.__name__}: Celkový čas spracovania: {dt.datetime.now() - start}")
     start = dt.datetime.now()
     teploty()
-    logger.info(f"Celkový čas spracovania: {dt.datetime.now() - start}")
-    start = dt.datetime.now()
+    logger.info(f"{teploty.__name__}: Celkový čas spracovania: {dt.datetime.now() - start}")
     print('done')
 
 if __name__ == "__main__":
