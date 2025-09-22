@@ -22,8 +22,8 @@ from pathlib import Path
 import sys
 import os
 
-SCR_DIR = os.path.dirname(os.path.abspath(__file__))
-sys.path.append(os.path.dirname(SCR_DIR))
+SRC_DIR = os.path.dirname(os.path.abspath(__file__))
+sys.path.append(os.path.dirname(SRC_DIR))
 
 from config import *
 
@@ -44,6 +44,8 @@ def check_month_file_measure(fn):
     #vytvor pomocne stlpce s mesiacmi
     df['M1'] = df.Cas_CET.dt.month.astype(int)
     df['M2'] = df.file.str[5:7].astype(int)
+
+
     dr = df[df.M1 != df.M2]
     print(fn, len(dr))
     if len(dr) > 0:
@@ -57,7 +59,7 @@ def check_month_file_measure(fn):
           
 
 def main():
-    check_month_file_measure(TEPLOTY_SK_DIR +  r'teploty.parquet')
+    check_month_file_measure(TEPLOTY_SK_DIR +  r'teploty_sk.parquet')
     check_month_file_measure(HLADINY_SK_DIR +  r'hladiny_sk.parquet')
     check_month_file_measure(PRIETOKY_SK_DIR +  r'prietoky_sk.parquet')
     check_month_file_measure(ZRAZKY_SK_DIR +  r'zrazky_sk.parquet')
