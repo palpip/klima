@@ -58,7 +58,7 @@ def check_month_file_measure(fn):
     
           
 
-def main():
+def check_month():
     check_month_file_measure(TEPLOTY_SK_DIR +  r'teploty_sk.parquet')
     check_month_file_measure(HLADINY_SK_DIR +  r'hladiny_sk.parquet')
     check_month_file_measure(PRIETOKY_SK_DIR +  r'prietoky_sk.parquet')
@@ -67,6 +67,62 @@ def main():
 
 
     # check_month_file_measure(TOPDATADIR +  'teploty_sk.parquet')    #correct
+
+def test_parquet_append():
+    '''test pripojenia dat do parquet suboru'''
+    df1 = pd.read_parquet(TEPLOTY_SK_DIR +  r'teploty_sk.parquet')
+    print(df1.head())
+    print('df1 len:{}'.format(len(df1)))
+    df2 = pd.read_parquet(TEPLOTY_SK_DIR +  r'teploty_sk.parquet')
+    print(df2.head())
+    print('df2 len:{}'.format(len(df2)))
+    df3 = pd.concat([df1, df2], ignore_index=True)
+    print('df3 len:{}'.format(len(df3)))
+    df3.to_parquet(TEPLOTY_SK_DIR +  r'teploty_skTmp.parquet', compression='snappy')
+    df4 = pd.read_parquet(TEPLOTY_SK_DIR +  r'teploty_skTmp.parquet')
+    print(f'df4 len:{len(df4)}')
+    df4 = df4.drop_duplicates()
+    print(f'df4 len after drop_duplicates:{len(df4)}')
+    logger_inf.info(f'test_parquet_append: df1 len:{len(df1)}, df2 len:{len(df2)}, df4 len after drop_duplicates:{len(df4)}')
+    print(df4.head(20))
+    print(df4.tail(20))
     
+def sqlite_infos():
+    print("Database record counts:")
+    for db in DATABASES:
+        conn = sqlite3.connect(db + '.sqlite')
+        cursor = conn.cursor()
+        cursor.execute("SELECT name FROM sqlite_master WHERE type='table';")
+        tables = cursor.fetchall()
+        for table in tables:
+            table_name = table[0]
+            cursor.execute(f"SELECT COUNT(*) FROM {table_name}")
+            count = cursor.fetchone()[0]
+            print(f"Database: {db}, Table: {table_name}, Record count: {count}")
+        conn.close()
+    
+    '''zisti informacie o databazach'''
+
+    for db in DATABASES:
+        conn = sqlite3.connect(db + '.sqlite')
+        cursor = conn.cursor()
+        cursor.execute("SELECT name FROM sqlite_master WHERE type='table';")
+        tables = cursor.fetchall()
+        print("Tables in the database:")
+        for table in tables:
+            print(table[0])
+            cursor.execute(f"PRAGMA table_info({table[0]});")
+            columns = cursor.fetchall()
+            print("Columns:")
+            for column in columns:
+                print(column)
+        conn.close()
+
+def main():
+    print(DATABASES)
+    sqlite_infos()
+    # test_parquet_append()
+ 
+
 if __name__ == "__main__":
     main()  
