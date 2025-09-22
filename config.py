@@ -12,6 +12,11 @@ UHRNTESTFILE = ZRAZKY_BREZNO_DIR + '2025-07-30-23-45.html'
 
 TOPDATADIR = SHMUDIR + r'data/'
 DATADIRS = ['teploty_sk', 'zrazky_brezno', 'zrazky_sk', 'hladiny_sk','prietoky_sk']
-
+DATABASES = [
+    TEPLOTY_SK_DIR+'teploty_sk',
+    ZRAZKY_BREZNO_DIR + 'zrazky_brezno',
+    ZRAZKY_SK_DIR + 'zrazky_sk',
+    HLADINY_SK_DIR + 'hladiny_sk',
+    PRIETOKY_SK_DIR +'prietoky_sk']
         
 
