@@ -87,6 +87,23 @@ def test_parquet_append():
     print(df4.head(20))
     print(df4.tail(20))
     
+def parquet_infos():
+    print("Parquet file infos:")
+    for fn in DATABASES:
+        fn = fn + '.parquet'
+        if Path(fn).exists():
+            df = pd.read_parquet(fn)
+            print('\n\n-------------------\n')
+            print(f"File: {fn}, Rows: {len(df)}, Columns: {df.columns.tolist()}")
+            print(df.head(5))
+            print(df.dtypes, df.info(), df.describe(include='all'))
+        else:
+            print(f"File: {fn} does not exist.")
+
+
+
+
+
 def sqlite_infos():
     print("Database record counts:")
     for db in DATABASES:
@@ -120,7 +137,8 @@ def sqlite_infos():
 
 def main():
     print(DATABASES)
-    sqlite_infos()
+    parquet_infos()
+    # sqlite_infos()
     # test_parquet_append()
  
 
