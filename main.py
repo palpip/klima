@@ -189,8 +189,7 @@ def prietoky_sk():
     #cistenie dat
     df.columns = df.columns.droplevel(1) # odstranenie viacriadkovych hlaviciek 
     df = df.rename(columns={'∆H': 'dH', 'QM,N' : 'QMN'}) # premenovanie stlpca
-    df.Z = df.Z.replace('-', pd.NA)
-    df.Z = df.Z.replace('//', 0)
+    df.Z = df.Z.replace('-', pd.NA).replace('//', 0)
     df = to_num(df, ['H','dH','Q','Tvo','Tvz','Z','QMN'])
     df = df.drop_duplicates(df, keep='first').sort_values(by='Cas_CET')
     save_frame(df, PRIETOKY_SK_DIR, 'prietoky_sk')
