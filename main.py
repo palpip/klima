@@ -112,14 +112,14 @@ def teploty():
             logger.error(f"Súbor {file_path} je prázdny")
     df.drop_duplicates(inplace=True)
     df.sort_values(by=['Cas_CET'], inplace=True)
+    save_frame(df, TEPLOTY_SK_DIR, 'teploty_sk')
     
     brezno = df[df['Stanica'] == 'Brezno']
-    save_frame(df, TEPLOTY_SK_DIR, 'teploty_sk')
     save_frame(brezno, TEPLOTY_SK_DIR, 'teploty_brezno')
     logger.info(f"TEPLOTY_SK - {len(df)} riadkov")
     logger.info(f"TEPLOTY_BREZNO - {len(brezno)} riadkov")
     
-def uhrny():   
+def zrazky_brezno():   
     df = pd.DataFrame()
     htmlfiles = Path(ZRAZKY_BREZNO_DIR).glob('*.html')
     for file_path in htmlfiles:
@@ -206,8 +206,8 @@ def main():
     zrazky_sk()    
     logger.info(f"{zrazky_sk.__name__}: Celkový čas spracovania: {dt.datetime.now() - start}")
     start = dt.datetime.now()
-    uhrny()        
-    logger.info(f"{uhrny.__name__}: Celkový čas spracovania: {dt.datetime.now() - start}")
+    zrazky_brezno()        
+    logger.info(f"{zrazky_brezno.__name__}: Celkový čas spracovania: {dt.datetime.now() - start}")
     start = dt.datetime.now()
     teploty()
     logger.info(f"{teploty.__name__}: Celkový čas spracovania: {dt.datetime.now() - start}")

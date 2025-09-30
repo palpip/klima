@@ -11,7 +11,7 @@ TEMPTESTFILE = TEPLOTY_SK_DIR + '2025-07-30-15-00.html'
 UHRNTESTFILE = ZRAZKY_BREZNO_DIR + '2025-07-30-23-45.html'
 
 TOPDATADIR = SHMUDIR + r'data/'
-DATADIRS = ['teploty_sk', 'zrazky_brezno', 'zrazky_sk', 'hladiny_sk','prietoky_sk']
+DATADIRS = ['teploty_sk/', 'zrazky_brezno/', 'zrazky_sk/', 'hladiny_sk/','prietoky_sk/']
 DATABASES = [
     TEPLOTY_SK_DIR+'teploty_sk',
     ZRAZKY_BREZNO_DIR + 'zrazky_brezno',
