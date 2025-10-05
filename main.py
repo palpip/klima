@@ -12,7 +12,7 @@ import re
 import openpyxl
 import datetime as dt
 import sqlite3
-import pyarrow
+import pyarrow as pa
 import logging
 
 from pathlib import Path
@@ -86,9 +86,14 @@ def save_frame(df, dirname, dfname):
 def to_num(df, cols):
     '''prevedie stlpce cols na numeric'''
     for col in cols:
-        df[col] = pd.to_numeric(df[col], errors='coerce')
+        df[col] = pd.to_numeric(df[col], errors='coerce', dtype_backend="pyarrow")
     return df
 
+def to_decimal(df, cols):
+    '''prevedie stlpce cols na decimal'''
+    for col in cols:
+        df[col] = df[col].astype(pd.ArrowDtype(pa.decimal128(21, 2)))
+    return df
 
 def teploty():
     df = pd.DataFrame()
@@ -189,8 +194,10 @@ def prietoky_sk():
     #cistenie dat
     df.columns = df.columns.droplevel(1) # odstranenie viacriadkovych hlaviciek 
     df = df.rename(columns={'∆H': 'dH', 'QM,N' : 'QMN'}) # premenovanie stlpca
-    df.Z = df.Z.replace('-', pd.NA).replace('//', 0)
-    df = to_num(df, ['H','dH','Q','Tvo','Tvz','Z','QMN'])
+    df.Z = df.Z.replace('-', pd.NA).replace('//', 0)    # nahradenie hodnoty '-' na NaN  a '//' na 0, OVERENE
+    df = to_num(df, ['H','dH','Q','Tvo','Tvz','Z','QMN']) # prevedenie na numeric
+    df = to_decimal(df, ['H','dH','Q','Tvo','Tvz','Z','QMN']) # prevedenie na decimal
+    
     df = df.drop_duplicates(df, keep='first').sort_values(by='Cas_CET')
     save_frame(df, PRIETOKY_SK_DIR, 'prietoky_sk')
     logger.info(f"PRIETOKY_SK - {len(df)} riadkov")
