@@ -18,6 +18,7 @@ import logging
 from pathlib import Path
 from config import *
 import logging
+from sqlalchemy import create_engine
 
 # nastavenie logovania
 # logovanie do log.log - chyby/debug
@@ -73,26 +74,41 @@ def find_files_with_extension(directory, extension):
     """
     return Path(directory).rglob(f'*{extension}')
 
-
+    
 def save_frame(df, dirname, dfname):
     '''ulozi dataframes v adresari dirname vo formate
     dfname.csv, dfname.xlsx, dfname.sqlite3'''
     df.to_csv(dirname + dfname + '.csv')
     df.to_excel(dirname + dfname + '.xlsx')
-    conn = sqlite3.connect(dirname + dfname + '.sqlite')
-    df.to_sql(dfname, conn, if_exists='replace', index=False)    
-    df.to_parquet(dirname + dfname + '.parquet', engine='auto') 
+    # conn = sqlite3.connect(dirname + dfname + '.sqlite')
+    # df.to_sql(dfname, conn, if_exists='replace', index=False)
+    # conn.close()
+    df.to_parquet(dirname + dfname + '.parquet', engine='auto')
+
+
+    engine = create_engine('postgresql://pp:ppp@192.168.1.88:5432/shmu')
+    df.to_sql(dfname, engine, if_exists='replace', index=False)
 
 def to_num(df, cols):
     '''prevedie stlpce cols na numeric'''
     for col in cols:
-        df[col] = pd.to_numeric(df[col], errors='coerce', dtype_backend="pyarrow")
+        # df[col] = pd.to_numeric(df[col], errors='coerce', dtype_backend='numpy_nullable').astype('Float32')
+        df[col] = pd.to_numeric(df[col], errors='coerce', dtype_backend='pyarrow' ).astype(pd.ArrowDtype(pa.float64()))
+        
     return df
 
 def to_decimal(df, cols):
     '''prevedie stlpce cols na decimal'''
     for col in cols:
-        df[col] = df[col].astype(pd.ArrowDtype(pa.decimal128(21, 2)))
+        # df[col] = df[col].astype(pd.ArrowDtype(pa.decimal128(21, 2))) # pyarrow 13
+        #df[col] = df[col].astype(pd.ArrowDtype(pa.decimal64(9, 2))) # pyarrow 12, OK, ale nejde do SQLite
+        df[col] = df[col].astype(pd.ArrowDtype(pa.decimal64(6, 1))) # pyarrow 12, OK, ale nejde do SQLite
+    return df
+
+def to_cat(df, cols):
+    '''prevedie stlpce cols na decimal'''
+    for col in cols:
+        df[col] = df[col].astype('category')
     return df
 
 def teploty():
@@ -194,12 +210,17 @@ def prietoky_sk():
     #cistenie dat
     df.columns = df.columns.droplevel(1) # odstranenie viacriadkovych hlaviciek 
     df = df.rename(columns={'∆H': 'dH', 'QM,N' : 'QMN'}) # premenovanie stlpca
-    df.Z = df.Z.replace('-', pd.NA).replace('//', 0)    # nahradenie hodnoty '-' na NaN  a '//' na 0, OVERENE
-    df = to_num(df, ['H','dH','Q','Tvo','Tvz','Z','QMN']) # prevedenie na numeric
-    df = to_decimal(df, ['H','dH','Q','Tvo','Tvz','Z','QMN']) # prevedenie na decimal
-    
+    df.Z = df.Z.replace('//', 0)    # nahradenie hodnoty  '//' na 0, OVERENE
     df = df.drop_duplicates(df, keep='first').sort_values(by='Cas_CET')
-    save_frame(df, PRIETOKY_SK_DIR, 'prietoky_sk')
+    # save_frame(df, PRIETOKY_SK_DIR, 'prietoky_sk_huge')
+    
+    df = to_num(df, ['H','dH','Q','Tvo','Tvz','Z','QMN', 'PA']) # prevedenie na numeric
+    # df = to_decimal(df, ['H','dH','Q','Tvo','Tvz','Z','QMN', 'PA']) # prevedenie na decimal
+    df = to_cat(df, ['Stanica - tok','P']) # prevedenie na category
+
+    dfa = df.convert_dtypes(dtype_backend='pyarrow') # prevedenie vsetkych stlpcov na pyarrow dtype
+    # dfa = df.convert_dtypes(dtype_backend='numpy_nullable') # prevedenie
+    save_frame(df, PRIETOKY_SK_DIR, 'prietoky_sk_cat')
     logger.info(f"PRIETOKY_SK - {len(df)} riadkov")
     
 def main():
