@@ -93,7 +93,8 @@ def to_num(df, cols):
     '''prevedie stlpce cols na numeric'''
     for col in cols:
         # df[col] = pd.to_numeric(df[col], errors='coerce', dtype_backend='numpy_nullable').astype('Float32')
-        df[col] = pd.to_numeric(df[col], errors='coerce', dtype_backend='pyarrow' ).astype(pd.ArrowDtype(pa.float64()))
+        #memory usage 60347 vs 80255 bytes
+        df[col] = pd.to_numeric(df[col], errors='coerce', dtype_backend='pyarrow' ).astype(pd.ArrowDtype(pa.float64())) 
         
     return df
 
@@ -165,12 +166,21 @@ def zrazky_sk():
             for table in tables:
                 table['file'] = file_path.name.split('.')[0]
                 df = pd.concat([df, table])
+        # print(df.count().max())    
+        # if df.count().max() > 50000:
+        #     # logger.warning(f"Súbor {file_path} má viac ako 50 riadkov, skontrolujte správnosť údajov!")
+        #     break
         else:
             logger.error(f"Súbor {file_path} je prázdny")
     df = df[df['Čas merania'] != 'Priemery:']
     df['Cas_CET'] = pd.to_datetime(df['Čas merania'], format='%d.%m.%Y %H:%M')
-    df = df.drop_duplicates(df, keep='first').sort_values(by='Čas merania')
-    save_frame(df, ZRAZKY_SK_DIR, 'zrazky_sk')    
+
+    df = df.drop_duplicates(subset=['Stanica', 'Typ', 'Cas_CET'], keep='first').sort_values(by='Čas merania')
+    df = to_cat(df, ['Stanica', 'Typ']) # prevedenie na category - nie je permanentne
+    df = to_num(df, ['Zrážky 1h', 'Zrážky 3h', 'Zrážky 6h', 'Zrážky 12h', 'Zrážky 24h' ]) # prevedenie na float32
+    df = df.convert_dtypes(dtype_backend='pyarrow') # prevedenie vsetkych stlpcov na pyarrow dtype
+    
+    save_frame(df[['Stanica', 'Typ', 'Cas_CET', 'Zrážky 1h', 'Zrážky 24h']], ZRAZKY_SK_DIR, 'zrazky_sk')    
     logger.info(f"ZRAZKY_SK - {len(df)} riadkov")
     
 def hladiny_sk():   
@@ -186,8 +196,11 @@ def hladiny_sk():
         else:
             logger.error(f"Súbor {file_path} je prázdny")
     df['Cas_CET'] = pd.to_datetime(df['Čas merania'], format='%d.%m.%Y %H:%M')
-    df = df.drop_duplicates(df, keep='first').sort_values(by='Cas_CET')
-    save_frame(df, HLADINY_SK_DIR, 'hladiny_sk')    
+    df = df.rename(columns={'Unnamed: 0': 'Typ'}) # premenovanie stlpca
+    df = df.drop_duplicates(subset=['Stanica', 'Tok', 'Cas_CET'], keep='first').sort_values(by='Cas_CET')
+    df = to_cat(df, ['Stanica', 'Tok', 'Typ']) # prevedenie na category - nie je permanentne
+    df = df.convert_dtypes(dtype_backend='pyarrow') # prevedenie vsetkych stlpcov na pyarrow dtype
+    save_frame(df[['Stanica', 'Tok', 'Cas_CET', 'Vodný stav']], HLADINY_SK_DIR, 'hladiny_sk')    
     logger.info(f"HLADINY_SK - {len(df)} riadkov")
     
 
@@ -211,34 +224,27 @@ def prietoky_sk():
     df.columns = df.columns.droplevel(1) # odstranenie viacriadkovych hlaviciek 
     df = df.rename(columns={'∆H': 'dH', 'QM,N' : 'QMN'}) # premenovanie stlpca
     df.Z = df.Z.replace('//', 0)    # nahradenie hodnoty  '//' na 0, OVERENE
-    df = df.drop_duplicates(df, keep='first').sort_values(by='Cas_CET')
-    # save_frame(df, PRIETOKY_SK_DIR, 'prietoky_sk_huge')
+    df = df.drop_duplicates(df, keep='first').sort_values(by='Cas_CET') # odstranenie duplicit a zoradenie podla casu
     
-    df = to_num(df, ['H','dH','Q','Tvo','Tvz','Z','QMN', 'PA']) # prevedenie na numeric
-    # df = to_decimal(df, ['H','dH','Q','Tvo','Tvz','Z','QMN', 'PA']) # prevedenie na decimal
-    df = to_cat(df, ['Stanica - tok','P']) # prevedenie na category
-
-    dfa = df.convert_dtypes(dtype_backend='pyarrow') # prevedenie vsetkych stlpcov na pyarrow dtype
-    # dfa = df.convert_dtypes(dtype_backend='numpy_nullable') # prevedenie
-    save_frame(df, PRIETOKY_SK_DIR, 'prietoky_sk_cat')
+    df = to_num(df, ['H','dH','Q','Tvo','Tvz','Z','QMN', 'PA']) # prevedenie na float32
+    df.L = df.L.astype('Int16') # prevedenie na Int16
+    df = to_cat(df, ['Stanica - tok','P']) # prevedenie na category - nie je permanentne 
+    df = df.convert_dtypes(dtype_backend='pyarrow') # prevedenie vsetkych stlpcov na pyarrow dtype
+    save_frame(df, PRIETOKY_SK_DIR, 'prietoky_sk')
     logger.info(f"PRIETOKY_SK - {len(df)} riadkov")
     
+def log_elapsed_time(func):
+    start = dt.datetime.now()
+    func()
+    elapsed = dt.datetime.now() - start
+    logger.info(f"{func.__name__}: Celkový čas spracovania: {elapsed}")
+
 def main():
-    start = dt.datetime.now()
-    prietoky_sk()
-    logger.info(f"{prietoky_sk.__name__}: Celkový čas spracovania: {dt.datetime.now() - start}")
-    start = dt.datetime.now()
-    hladiny_sk()
-    logger.info(f"{hladiny_sk.__name__}: Celkový čas spracovania: {dt.datetime.now() - start}")
-    start = dt.datetime.now()
-    zrazky_sk()    
-    logger.info(f"{zrazky_sk.__name__}: Celkový čas spracovania: {dt.datetime.now() - start}")
-    start = dt.datetime.now()
-    zrazky_brezno()        
-    logger.info(f"{zrazky_brezno.__name__}: Celkový čas spracovania: {dt.datetime.now() - start}")
-    start = dt.datetime.now()
-    teploty()
-    logger.info(f"{teploty.__name__}: Celkový čas spracovania: {dt.datetime.now() - start}")
+    workflow = [prietoky_sk, hladiny_sk, zrazky_sk, zrazky_brezno, teploty]
+    workflow = [zrazky_sk]
+
+    for func in workflow:
+        log_elapsed_time(func)
     print('done')
 
 if __name__ == "__main__":

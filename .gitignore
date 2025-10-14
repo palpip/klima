@@ -1,6 +1,7 @@
 DATA
 SHMU
 seko
+temp
 .vscode
 .git
 .venv
