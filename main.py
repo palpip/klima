@@ -199,10 +199,51 @@ def hladiny_sk():
     df = df.rename(columns={'Unnamed: 0': 'Typ'}) # premenovanie stlpca
     df = df.drop_duplicates(subset=['Stanica', 'Tok', 'Cas_CET'], keep='first').sort_values(by='Cas_CET')
     df = to_cat(df, ['Stanica', 'Tok', 'Typ']) # prevedenie na category - nie je permanentne
-    df = df.convert_dtypes(dtype_backend='pyarrow') # prevedenie vsetkych stlpcov na pyarrow dtype
+    
+    df = df.convert_dtypes(dtype_backend='pyarrow') # prevedenie vsetkych stlpcov na pyarrow dtype, cisla su v integer
     save_frame(df[['Stanica', 'Tok', 'Cas_CET', 'Vodný stav']], HLADINY_SK_DIR, 'hladiny_sk')    
     logger.info(f"HLADINY_SK - {len(df)} riadkov")
     
+def podzemne_vody_sk():   
+    df_vrt = pd.DataFrame()
+    df_prm = pd.DataFrame()
+    htmlfiles = Path(PODZEMNE_VODY_SK_DIR).glob('*.html')
+    for file_path in htmlfiles:
+        if file_path.stat().st_size > 0:
+            print(file_path)
+            filename = file_path.name.split('.')[0]
+            [tablea,tableb] = extract_tables_from_html(file_path,100) # dve tabulky
+            tablea['file'] = filename
+            tableb['file'] = filename
+            df_vrt = pd.concat([df_vrt, tablea])
+            df_prm = pd.concat([df_prm, tableb])
+        else:
+            logger.error(f"Súbor {file_path} je prázdny")
+    df_vrtcols ={'Číslo stanice' : 'Stanica', 'Názov lokality' : 'Nazov_lok', 'Hĺbka vrtu [m]' : 'Hlbka_vrtu', 'Nadmorská výška terénu [m]' : 'vyska_terenu',
+               'Dátum a čas merania' : 'Cas', 'Úroveň podzemnej vody [m n.m.]' : 'uroven_PV'}
+    df_prmcols ={'Číslo stanice' : 'Stanica', 'Názov lokality' : 'Nazov_lok', 'Názov prameňa' : 'Nazov_prm', 'Nadmorská výška objektu [m]' : 'vyska_objektu',
+               'Dátum a čas merania' : 'Cas', 'Výdatnosť prameňa [l.s-1]' : 'vydatnost'}
+    df_vrt = df_vrt.rename(columns=df_vrtcols) # premenovanie stlpca
+    df_vrt['Cas_CET'] = pd.to_datetime(df_vrt['Cas'], format='%d.%m.%Y %H:%M')
+    df_vrt = df_vrt.drop_duplicates(subset=['Stanica', 'Nazov_lok', 'Povodie', 'Cas_CET'], keep='first').sort_values(by='Cas_CET')
+    df_vrt = to_cat(df_vrt, ['Stanica', 'Povodie', 'Nazov_lok']) # prevedenie na category - nie je permanentne
+    df_vrt = df_vrt.convert_dtypes(dtype_backend='pyarrow') # prevedenie vsetkych stlpcov na pyarrow dtype, cisla su v integer
+    df_vrt = df_vrt.sort_values(by=['Stanica', 'Nazov_lok', 'Cas_CET'])
+    
+    df_prm = df_prm.rename(columns=df_prmcols) # premenovanie stlpca
+    df_prm['Cas_CET'] = pd.to_datetime(df_prm['Cas'], format='%d.%m.%Y %H:%M')
+    df_prm = df_prm.drop_duplicates(subset=['Stanica', 'Nazov_lok', 'Povodie', 'Cas_CET'], keep='first').sort_values(by='Cas_CET')
+    df_prm = to_cat(df_prm, ['Stanica', 'Povodie', 'Nazov_lok']) # prevedenie na category - nie je permanentne
+    df_prm = df_prm.convert_dtypes(dtype_backend='pyarrow') # prevedenie vsetkych stlpcov na pyarrow dtype, cisla su v integer
+    df_prm = df_prm.sort_values(by=['Stanica', 'Nazov_prm', 'Cas_CET'])
+    
+ 
+    save_frame(df_vrt, PODZEMNE_VODY_SK_DIR, 'PV_vrt_sk')    
+    save_frame(df_prm, PODZEMNE_VODY_SK_DIR, 'PV_prm_sk')    
+    
+    logger.info(f"PODZEMNE_VODY_SK - df_vrt {len(df_vrt)} riadkov")
+    logger.info(f"PODZEMNE_VODY_SK - df_prm {len(df_prm)} riadkov")
+
 
 def prietoky_sk():   
     df = pd.DataFrame()
@@ -240,9 +281,9 @@ def log_elapsed_time(func):
     logger.info(f"{func.__name__}: Celkový čas spracovania: {elapsed}")
 
 def main():
-    workflow = [prietoky_sk, hladiny_sk, zrazky_sk, zrazky_brezno, teploty]
-    workflow = [zrazky_sk]
-
+    workflow = [podzemne_vody_sk, prietoky_sk, hladiny_sk, zrazky_sk, zrazky_brezno, teploty]
+    workflow = [podzemne_vody_sk]
+    
     for func in workflow:
         log_elapsed_time(func)
     print('done')
