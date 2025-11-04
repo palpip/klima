@@ -53,19 +53,11 @@ def save_frame(df, dirname, dfname):
 
 
 
-def teploty(infile, lokalita='Brezno'):
+def teploty(infile=TEPLOTY_SK_DIR+'teploty_sk', lokalita='Brezno'):
     #read parquet file
     df = pd.read_parquet(infile + '.parquet')
     print('starting teploty')
     print(df.info())
-    # make daily temperature averages
-    # whole dataframe SK - not grouped by station
-    # df_agg = df
-    # df_agg = df_agg.set_index('Cas_CET').resample('D').Teplota.agg(['min', 'max', 'mean'])
-    # df_agg.reset_index(inplace=True)
-    # df_agg.sort_values(by='Cas_CET', inplace=True)
-    # df_agg['Cas_CET'] = df_agg['Cas_CET'].dt.strftime('%Y-%m-%d')
-    
     # grouped/aggregated by station
     df_agg = df
     df_agg = df_agg.set_index('Cas_CET').groupby('Stanica').resample('D').Teplota.agg(['min', 'max', 'mean'])
@@ -84,31 +76,17 @@ def teploty(infile, lokalita='Brezno'):
     df_lokalita_agg = df_agg[df_agg['Stanica'] == lokalita]
     save_frame(df_lokalita_agg,TOPDATADIR+DATADIRS[0], 'teploty_denne_'+lokalita.replace(' - ', '_').lower())
     print(TOPDATADIR+DATADIRS[0], f"teploty_denne_{lokalita}", ' Saved')
-    
-
-
- 
-    
-    
-def zrazky_sk(infile, lokalita = 'Brezno'):
-    df = pd.read_parquet(ZRAZKY_SK_DIR + 'zrazky_sk.parquet'   )
+        
+def zrazky_sk(infile=ZRAZKY_SK_DIR + 'zrazky_sk', lokalita = 'Brezno'):
+    df = pd.read_parquet(infile + '.parquet'   )
     # make daily averages
-    
-    
     # grouped/aggregated by station
     df_agg = df
     df_agg = df_agg.groupby(['Stanica', pd.Grouper(key='Cas_CET', freq='D')], observed=True)['Zrážky 1h'].agg(['sum', 'count']).reset_index()
     
-    # df_agg = df_agg.set_index('Cas_CET').groupby('Stanica').resample('D')
-    # df_agg = df_agg['Zrážky 1h'].agg(['sum'])
-    # df_agg.reset_index(inplace=True)
-    # df_agg['Cas_CET'] = df_agg['Cas_CET'].dt.strftime('%Y-%m-%d')
-    # df_agg.sort_values(by=['Stanica','Cas_CET'], inplace=True)
-
     # save whole SK
     save_frame(df_agg,TOPDATADIR+DATADIRS[2], 'zrazky_denne_sk')
-    
-    
+       
     # filter lokalita
     # surove data pre lokalitu 
     df_lokalita_raw = df[df['Stanica'] == lokalita]
@@ -124,8 +102,6 @@ def zrazky_sk(infile, lokalita = 'Brezno'):
     # save_frame(df, ZRAZKY_SK_DIR, 'zrazky_sk')    
     logger.info(f"ZRAZKY_SK - {len(df)} riadkov")
 
-
-    
 def hladiny_sk(lokalita='Brezno', tok='Hron'):   
     df = pd.read_parquet(HLADINY_SK_DIR + 'hladiny_sk.parquet'   )
     df = df.drop_duplicates(df, keep='first').sort_values(by='Cas_CET')
@@ -164,7 +140,21 @@ def prietoky_sk(lokalita='Brezno - Hron'):
     logger.info(f"PRIETOKY_BREZNO - {len(dfb)} riadkov")
     # save_frame(df, PRIETOKY_SK_DIR, 'prietoky_sk')
     # logger.info(f"PRIETOKY_SK - {len(df)} riadkov")
-    
+
+
+def podzemne_vody_sk():
+    return   
+    df = pd.read_parquet(PODZEMNE_VODY_SK_DIR + 'podzemne_vody_sk.parquet'   )
+    df = df.drop_duplicates(df, keep='first').sort_values(by='Cas_CET')
+    save_frame(df, PODZEMNE_VODY_SK_DIR, 'podzemne_vody_sk')    
+    logger.info(f"PODZEMNE_VODY_SK - {len(df)} riadkov")
+
+def log_elapsed_time(func):
+    start = dt.datetime.now()
+    func()
+    elapsed = dt.datetime.now() - start
+    logger.info(f"{func.__name__}: Celkový čas spracovania: {elapsed}")
+
 def main():
 
 
@@ -174,16 +164,21 @@ def main():
     # start = dt.datetime.now()
     # prietoky_sk()
     # logger.info(f"{prietoky_sk.__name__}: Celkový čas spracovania: {dt.datetime.now() - start}")
-    start = dt.datetime.now()
-    hladiny_sk()
-    logger.info(f"{hladiny_sk.__name__}: Celkový čas spracovania: {dt.datetime.now() - start}")
-    start = dt.datetime.now()
-    zrazky_sk(DATABASES[2])    
-    logger.info(f"{zrazky_sk.__name__}: Celkový čas spracovania: {dt.datetime.now() - start}")
+    # start = dt.datetime.now()
+    # hladiny_sk()
+    # logger.info(f"{hladiny_sk.__name__}: Celkový čas spracovania: {dt.datetime.now() - start}")
+    # start = dt.datetime.now()
+    # zrazky_sk(DATABASES[2])    
+    # logger.info(f"{zrazky_sk.__name__}: Celkový čas spracovania: {dt.datetime.now() - start}")
     # start = dt.datetime.now()
     # zrazky_brezno()        
     # logger.info(f"{zrazky_brezno.__name__}: Celkový čas spracovania: {dt.datetime.now() - start}")
-    print('done')
+    # print('done')
     
+    workflow = [podzemne_vody_sk, prietoky_sk, hladiny_sk, zrazky_sk, teploty]
+    for func in workflow:
+        log_elapsed_time(func)
+    print('done')
+
 if __name__ == "__main__":
     main()  
