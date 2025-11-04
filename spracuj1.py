@@ -32,7 +32,7 @@ logger_inf.addHandler(logging.FileHandler(TOPDIR + LOGFILE_INF, mode='a'))
 logger.setLevel(logging.DEBUG)
 logger_inf.setLevel(logging.DEBUG)
 
-pd.DataFrame().to_excel(TOPDATADIR + 'vystup.xlsx', sheet_name = 'info', index=False)  # vytvorenie prazdneho xlsx suboru
+pd.DataFrame().to_excel(TOPDATADIR + 'vystupxx.xlsx', sheet_name = 'info', index=False)  # vytvorenie prazdneho xlsx suboru
 # with pd.ExcelWriter(TOPDIR + 'vystup.xlsx', mode = 'w', engine='openpyxl') as EXCELWRITER:
 #     pd.DataFrame.to_excel(EXCELWRITER, sheet_name='info', index=False)
 
@@ -44,7 +44,7 @@ def save_frame(df, dirname, dfname):
     # df.to_excel(dirname + dfname + '.xlsx', sheet_name=dfname, index=False)
     
     print('-----', dirname + dfname + '.xlsx')
-    with pd.ExcelWriter(TOPDATADIR + 'vystup.xlsx', mode = 'a', engine='openpyxl', if_sheet_exists='replace') as EXCELWRITER:
+    with pd.ExcelWriter(TOPDATADIR + 'vystupxx.xlsx', mode = 'a', engine='openpyxl', if_sheet_exists='replace') as EXCELWRITER:
         df.to_excel(EXCELWRITER, sheet_name=dfname, index=False)
     
     # conn = sqlite3.connect(dirname + dfname + '.sqlite')
@@ -94,23 +94,19 @@ def zrazky_sk(infile, lokalita = 'Brezno'):
     df = pd.read_parquet(ZRAZKY_SK_DIR + 'zrazky_sk.parquet'   )
     # make daily averages
     
-    # whole dataframe SK - not grouped by station
-    # df_agg = df
-    # df_agg = df_agg.set_index('Cas_CET').resample('D')['Zrážky 1h'].agg(['sum'])
-    # df_agg.reset_index(inplace=True)
-    # df_agg.sort_values(by='Cas_CET', inplace=True)
-    # df_agg['Cas_CET'] = df_agg['Cas_CET'].dt.strftime('%Y-%m-%d')
     
     # grouped/aggregated by station
     df_agg = df
-    df_agg = df_agg.set_index('Cas_CET').groupby('Stanica').resample('D')
-    df_agg = df_agg['Zrážky 1h'].agg(['sum'])
-    df_agg.reset_index(inplace=True)
-    df_agg['Cas_CET'] = df_agg['Cas_CET'].dt.strftime('%Y-%m-%d')
-    df_agg.sort_values(by=['Stanica','Cas_CET'], inplace=True)
+    df_agg = df_agg.groupby(['Stanica', pd.Grouper(key='Cas_CET', freq='D')], observed=True)['Zrážky 1h'].agg(['sum', 'count']).reset_index()
+    
+    # df_agg = df_agg.set_index('Cas_CET').groupby('Stanica').resample('D')
+    # df_agg = df_agg['Zrážky 1h'].agg(['sum'])
+    # df_agg.reset_index(inplace=True)
+    # df_agg['Cas_CET'] = df_agg['Cas_CET'].dt.strftime('%Y-%m-%d')
+    # df_agg.sort_values(by=['Stanica','Cas_CET'], inplace=True)
 
     # save whole SK
-    # save_frame(df_agg,TOPDATADIR+DATADIRS[2], 'zrazky_denne_sk')
+    save_frame(df_agg,TOPDATADIR+DATADIRS[2], 'zrazky_denne_sk')
     
     
     # filter lokalita
@@ -121,7 +117,7 @@ def zrazky_sk(infile, lokalita = 'Brezno'):
     print(TOPDATADIR+DATADIRS[2], f"zrazky_{lokalita}", ' Saved')
     
     df_lokalita_agg = df_agg[df_agg['Stanica'] == lokalita]
-    df_lokalita_agg = df_lokalita_agg.sort_values(by='Cas_CET')
+    # df_lokalita_agg = df_lokalita_agg.sort_values(by='Cas_CET')
     save_frame(df_lokalita_agg,TOPDATADIR+DATADIRS[2], 'zrazky_denne_'+lokalita.replace(' - ', '_').lower())
     print(TOPDATADIR+DATADIRS[2], f"zrazky_denne_{lokalita}", ' Saved')
     
@@ -132,24 +128,15 @@ def zrazky_sk(infile, lokalita = 'Brezno'):
     
 def hladiny_sk(lokalita='Brezno', tok='Hron'):   
     df = pd.read_parquet(HLADINY_SK_DIR + 'hladiny_sk.parquet'   )
-    # make daily averages
-    # whole dataframe SK - not grouped by station nor Tok
     df = df.drop_duplicates(df, keep='first').sort_values(by='Cas_CET')
-    # df_agg = df
-    # df_agg = df_agg.set_index('Cas_CET').resample('D')['Vodný stav'].agg(['min', 'max', 'mean'])
-    # df_agg.reset_index(inplace=True)
-    # df_agg.sort_values(by='Cas_CET', inplace=True)
-    # df_agg['Cas_CET'] = df_agg['Cas_CET'].dt.strftime('%Y-%m-%d')
-    # # grouped/aggregated by station
+    # grouped/aggregated by station
     df_agg = df
-    df_agg = df_agg.set_index('Cas_CET').groupby(['Stanica', 'Tok']).resample('D')
-    df_agg = df_agg['Vodný stav'].agg(['min', 'max', 'mean'])
-    df_agg.reset_index(inplace=True)
-    df_agg['Cas_CET'] = df_agg['Cas_CET'].dt.strftime('%Y-%m-%d')
-    df_agg.sort_values(by=['Stanica', 'Tok', 'Cas_CET'], inplace=True)  
+    df_agg = df_agg.groupby(['Stanica','Tok', pd.Grouper(key='Cas_CET', freq='W')], observed=True)['Vodný stav'].agg(['min', 'max', 'mean']).reset_index()
+    # df_agg['Cas_CET'] = df_agg['Cas_CET'].dt.strftime('%Y-%m-%d')
+    # df_agg.sort_values(by=['Stanica', 'Tok', 'Cas_CET'], inplace=True)  
     
     # save whole SK
-    #save_frame(df, HLADINY_SK_DIR, 'hladiny_sk')    
+    save_frame(df_agg, HLADINY_SK_DIR, 'hladiny_sk')    
     
     # filter lokalita
     # surove data pre lokalitu
@@ -159,7 +146,7 @@ def hladiny_sk(lokalita='Brezno', tok='Hron'):
     print(TOPDATADIR+DATADIRS[3], f"hladiny_{lokalita}", ' Saved')
     # denné agregované data pre lokalitu
     df_lokalita_agg = df_agg[(df_agg['Stanica'] == lokalita) & (df_agg['Tok'] == tok)]
-    df_lokalita_agg = df_lokalita_agg.sort_values(by='Cas_CET')
+    df_lokalita_agg = df_lokalita_agg.sort_values(by='level_2')
     save_frame(df_lokalita_agg,TOPDATADIR+DATADIRS[3], 'hladiny_denne_'+lokalita.replace(' - ', '_').lower())
     print(TOPDATADIR+DATADIRS[3], f"hladiny denne_{lokalita}", ' Saved')
     # filter by station and tok    
@@ -179,19 +166,21 @@ def prietoky_sk(lokalita='Brezno - Hron'):
     # logger.info(f"PRIETOKY_SK - {len(df)} riadkov")
     
 def main():
-    start = dt.datetime.now()
-    teploty(DATABASES[0])
-    logger.info(f"{teploty.__name__}: Celkový čas spracovania: {dt.datetime.now() - start}")
-    start = dt.datetime.now()
-    prietoky_sk()
-    logger.info(f"{prietoky_sk.__name__}: Celkový čas spracovania: {dt.datetime.now() - start}")
+
+
+    # start = dt.datetime.now()
+    # teploty(DATABASES[0])
+    # logger.info(f"{teploty.__name__}: Celkový čas spracovania: {dt.datetime.now() - start}")
+    # start = dt.datetime.now()
+    # prietoky_sk()
+    # logger.info(f"{prietoky_sk.__name__}: Celkový čas spracovania: {dt.datetime.now() - start}")
     start = dt.datetime.now()
     hladiny_sk()
     logger.info(f"{hladiny_sk.__name__}: Celkový čas spracovania: {dt.datetime.now() - start}")
-    # start = dt.datetime.now()
+    start = dt.datetime.now()
     zrazky_sk(DATABASES[2])    
     logger.info(f"{zrazky_sk.__name__}: Celkový čas spracovania: {dt.datetime.now() - start}")
-    start = dt.datetime.now()
+    # start = dt.datetime.now()
     # zrazky_brezno()        
     # logger.info(f"{zrazky_brezno.__name__}: Celkový čas spracovania: {dt.datetime.now() - start}")
     print('done')

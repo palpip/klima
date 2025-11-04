@@ -124,7 +124,7 @@ def teploty():
             table.Teplota = table.Teplota.str.replace(' °C','').apply(pd.to_numeric, errors='coerce').astype(float)
             table['Rýchlosť'] = table['Rýchlosť'].str.replace(' m/s','').apply(pd.to_numeric, errors='coerce').astype(float)
             table.Tlak = table.Tlak.str.replace(' hPa','').apply(pd.to_numeric, errors='coerce').astype(float)
-            regex_pattern = r'sia - (.*) - (.*) LSE'
+            regex_pattern = r'sia - (.*) - (.*) (LSE|SEČ)'
             [datum,cas] = extract_date_from_html(file_path, regex_pattern)
             table['Cas_CET'] = dt.datetime.strptime(f'{datum} {cas}','%d.%m.%Y %H:%M')
             table['file'] = file_path.name.split('.')[0]
@@ -281,8 +281,9 @@ def log_elapsed_time(func):
     logger.info(f"{func.__name__}: Celkový čas spracovania: {elapsed}")
 
 def main():
-    workflow = [podzemne_vody_sk, prietoky_sk, hladiny_sk, zrazky_sk, zrazky_brezno, teploty]
-    workflow = [podzemne_vody_sk]
+    workflow = [prietoky_sk, hladiny_sk, zrazky_sk, zrazky_brezno, teploty]   
+ #   workflow = [podzemne_vody_sk, prietoky_sk, hladiny_sk, zrazky_sk, zrazky_brezno, teploty]
+    workflow = [teploty]
     
     for func in workflow:
         log_elapsed_time(func)
