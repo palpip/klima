@@ -79,7 +79,7 @@ def save_frame(df, dirname, dfname):
     '''ulozi dataframes v adresari dirname vo formate
     dfname.csv, dfname.xlsx, dfname.sqlite3'''
     df.to_csv(dirname + dfname + '.csv')
-    df.to_excel(dirname + dfname + '.xlsx')
+    #df.to_excel(dirname + dfname + '.xlsx')
     # conn = sqlite3.connect(dirname + dfname + '.sqlite')
     # df.to_sql(dfname, conn, if_exists='replace', index=False)
     # conn.close()
@@ -134,10 +134,10 @@ def teploty():
             logger.error(f"Súbor {file_path} je prázdny")
     df.drop_duplicates(inplace=True)
     df.sort_values(by=['Cas_CET'], inplace=True)
-    save_frame(df, TEPLOTY_SK_DIR, 'teploty_sk')
+    save_frame(df, RES_TEPLOTY_SK_DIR, 'teploty_sk')
     
     brezno = df[df['Stanica'] == 'Brezno']
-    save_frame(brezno, TEPLOTY_SK_DIR, 'teploty_brezno')
+    save_frame(brezno, RES_TEPLOTY_SK_DIR, 'teploty_brezno')
     logger.info(f"TEPLOTY_SK - {len(df)} riadkov")
     logger.info(f"TEPLOTY_BREZNO - {len(brezno)} riadkov")
     
@@ -152,7 +152,7 @@ def zrazky_brezno():
     
     df['Cas_CET'] = pd.to_datetime(df['Čas merania'], format='%d.%m.%Y %H:%M')
     df = df.drop_duplicates(df, keep='first').sort_values(by='Cas_CET')
-    save_frame(df, ZRAZKY_BREZNO_DIR, 'zrazky_brezno')    
+    save_frame(df, RES_ZRAZKY_BREZNO_DIR, 'zrazky_brezno')    
     logger.info(f"ZRAZKY_BREZNO - {len(df)} riadkov")
     
     
@@ -180,7 +180,7 @@ def zrazky_sk():
     df = to_num(df, ['Zrážky 1h', 'Zrážky 3h', 'Zrážky 6h', 'Zrážky 12h', 'Zrážky 24h' ]) # prevedenie na float32
     df = df.convert_dtypes(dtype_backend='pyarrow') # prevedenie vsetkych stlpcov na pyarrow dtype
     
-    save_frame(df[['Stanica', 'Typ', 'Cas_CET', 'Zrážky 1h', 'Zrážky 24h']], ZRAZKY_SK_DIR, 'zrazky_sk')    
+    save_frame(df[['Stanica', 'Typ', 'Cas_CET', 'Zrážky 1h', 'Zrážky 24h']], RES_ZRAZKY_SK_DIR, 'zrazky_sk')    
     logger.info(f"ZRAZKY_SK - {len(df)} riadkov")
     
 def hladiny_sk():   
@@ -201,7 +201,7 @@ def hladiny_sk():
     df = to_cat(df, ['Stanica', 'Tok', 'Typ']) # prevedenie na category - nie je permanentne
     
     df = df.convert_dtypes(dtype_backend='pyarrow') # prevedenie vsetkych stlpcov na pyarrow dtype, cisla su v integer
-    save_frame(df[['Stanica', 'Tok', 'Cas_CET', 'Vodný stav']], HLADINY_SK_DIR, 'hladiny_sk')    
+    save_frame(df[['Stanica', 'Tok', 'Cas_CET', 'Vodný stav']], RES_HLADINY_SK_DIR, 'hladiny_sk')    
     logger.info(f"HLADINY_SK - {len(df)} riadkov")
     
 def podzemne_vody_sk():   
@@ -238,8 +238,8 @@ def podzemne_vody_sk():
     df_prm = df_prm.sort_values(by=['Stanica', 'Nazov_prm', 'Cas_CET'])
     
  
-    save_frame(df_vrt, PODZEMNE_VODY_SK_DIR, 'PV_vrt_sk')    
-    save_frame(df_prm, PODZEMNE_VODY_SK_DIR, 'PV_prm_sk')    
+    save_frame(df_vrt, RES_PODZEMNE_VODY_SK_DIR, 'PV_vrt_sk')    
+    save_frame(df_prm, RES_PODZEMNE_VODY_SK_DIR, 'PV_prm_sk')    
     
     logger.info(f"PODZEMNE_VODY_SK - df_vrt {len(df_vrt)} riadkov")
     logger.info(f"PODZEMNE_VODY_SK - df_prm {len(df_prm)} riadkov")
@@ -271,7 +271,7 @@ def prietoky_sk():
     df.L = df.L.astype('Int16') # prevedenie na Int16
     df = to_cat(df, ['Stanica - tok','P']) # prevedenie na category - nie je permanentne 
     df = df.convert_dtypes(dtype_backend='pyarrow') # prevedenie vsetkych stlpcov na pyarrow dtype
-    save_frame(df, PRIETOKY_SK_DIR, 'prietoky_sk')
+    save_frame(df, RES_PRIETOKY_SK_DIR, 'prietoky_sk')
     logger.info(f"PRIETOKY_SK - {len(df)} riadkov")
     
 def log_elapsed_time(func):
@@ -281,9 +281,10 @@ def log_elapsed_time(func):
     logger.info(f"{func.__name__}: Celkový čas spracovania: {elapsed}")
 
 def main():
-    workflow = [prietoky_sk, hladiny_sk, zrazky_sk, zrazky_brezno, teploty]   
- #   workflow = [podzemne_vody_sk, prietoky_sk, hladiny_sk, zrazky_sk, zrazky_brezno, teploty]
-    workflow = [teploty]
+    workflow = [podzemne_vody_sk,prietoky_sk, hladiny_sk, zrazky_sk, zrazky_brezno, teploty]   
+    workflow = [podzemne_vody_sk, prietoky_sk, hladiny_sk, zrazky_brezno, teploty] # zrazky_sk,
+    workflow = [prietoky_sk]
+    workflow = [zrazky_sk]
     
     for func in workflow:
         log_elapsed_time(func)
