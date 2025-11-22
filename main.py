@@ -113,166 +113,185 @@ def to_cat(df, cols):
     return df
 
 def teploty():
-    df = pd.DataFrame()
-    htmlfiles = Path(TEPLOTY_SK_DIR).glob('*.html')
-    for file_path in htmlfiles:
-        if file_path.stat().st_size > 0:
-            print(file_path)
-            tables = pd.read_html(file_path)
-            table = tables[0]
-            table.columns = table.columns.droplevel(0)
-            table.Teplota = table.Teplota.str.replace(' °C','').apply(pd.to_numeric, errors='coerce').astype(float)
-            table['Rýchlosť'] = table['Rýchlosť'].str.replace(' m/s','').apply(pd.to_numeric, errors='coerce').astype(float)
-            table.Tlak = table.Tlak.str.replace(' hPa','').apply(pd.to_numeric, errors='coerce').astype(float)
-            regex_pattern = r'sia - (.*) - (.*) (LSE|SEČ)'
-            [datum,cas] = extract_date_from_html(file_path, regex_pattern)
-            table['Cas_CET'] = dt.datetime.strptime(f'{datum} {cas}','%d.%m.%Y %H:%M')
-            table['file'] = file_path.name.split('.')[0]
-            df = pd.concat([df, table])
-            # print(df)
-        else:
-            logger.error(f"Súbor {file_path} je prázdny")
-    df.drop_duplicates(inplace=True)
-    df.sort_values(by=['Cas_CET'], inplace=True)
-    save_frame(df, RES_TEPLOTY_SK_DIR, 'teploty_sk')
-    
-    brezno = df[df['Stanica'] == 'Brezno']
-    save_frame(brezno, RES_TEPLOTY_SK_DIR, 'teploty_brezno')
-    logger.info(f"TEPLOTY_SK - {len(df)} riadkov")
-    logger.info(f"TEPLOTY_BREZNO - {len(brezno)} riadkov")
+    dates = get_date_interval(TEPLOTY_SK_DIR)
+    for date in dates[:-1]:
+        print(f'Spracovávam teploty pre dátum: {date}')
+        htmlfiles = Path(TEPLOTY_SK_DIR).glob(f'*{date}*.html')
+        df = pd.DataFrame()
+        for file_path in htmlfiles:
+            if file_path.stat().st_size > 0:
+                print(file_path)
+                tables = pd.read_html(file_path)
+                table = tables[0]
+                table.columns = table.columns.droplevel(0)
+                table.Teplota = table.Teplota.str.replace(' °C','').apply(pd.to_numeric, errors='coerce').astype(float)
+                table['Rýchlosť'] = table['Rýchlosť'].str.replace(' m/s','').apply(pd.to_numeric, errors='coerce').astype(float)
+                table.Tlak = table.Tlak.str.replace(' hPa','').apply(pd.to_numeric, errors='coerce').astype(float)
+                regex_pattern = r'sia - (.*) - (.*) (LSE|SEČ)'
+                [datum,cas] = extract_date_from_html(file_path, regex_pattern)
+                table['Cas_CET'] = dt.datetime.strptime(f'{datum} {cas}','%d.%m.%Y %H:%M')
+                table['file'] = file_path.name.split('.')[0]
+                df = pd.concat([df, table])
+                # print(df)
+            else:
+                logger.error(f"Súbor {file_path} je prázdny")
+        df.drop_duplicates(inplace=True)
+        df.sort_values(by=['Cas_CET'], inplace=True)
+        save_frame(df, RES_TEPLOTY_SK_DIR, f'{date}-teploty_sk')
+        
+        brezno = df[df['Stanica'] == 'Brezno']
+        save_frame(brezno, RES_TEPLOTY_SK_DIR, f'{date}-teploty_brezno')
+        logger.info(f"{date}-TEPLOTY_SK - {len(df)} riadkov")
+        logger.info(f"{date}-TEPLOTY_BREZNO - {len(brezno)} riadkov")
     
 def zrazky_brezno():   
-    df = pd.DataFrame()
-    htmlfiles = Path(ZRAZKY_BREZNO_DIR).glob('*.html')
-    for file_path in htmlfiles:
-        print(file_path)
-        table = extract_tables_from_html(file_path,1)
-        table['file'] = file_path.name.split('.')[0]
-        df = pd.concat([df, table])
-    
-    df['Cas_CET'] = pd.to_datetime(df['Čas merania'], format='%d.%m.%Y %H:%M')
-    df = df.drop_duplicates(df, keep='first').sort_values(by='Cas_CET')
-    save_frame(df, RES_ZRAZKY_BREZNO_DIR, 'zrazky_brezno')    
-    logger.info(f"ZRAZKY_BREZNO - {len(df)} riadkov")
+    dates = get_date_interval(ZRAZKY_BREZNO_DIR)
+    for date in dates[:-1]:
+        print(f'Spracovávam teploty pre dátum: {date}')
+        df = pd.DataFrame()
+        htmlfiles = Path(ZRAZKY_BREZNO_DIR).glob(f'*{date}*.html')
+        for file_path in htmlfiles:
+            print(file_path)
+            table = extract_tables_from_html(file_path,1)
+            table['file'] = file_path.name.split('.')[0]
+            df = pd.concat([df, table])
+        
+        df['Cas_CET'] = pd.to_datetime(df['Čas merania'], format='%d.%m.%Y %H:%M')
+        df = df.drop_duplicates(df, keep='first').sort_values(by='Cas_CET')
+        save_frame(df, RES_ZRAZKY_BREZNO_DIR, f'{date}-zrazky_brezno')    
+        logger.info(f"{date}-ZRAZKY_BREZNO - {len(df)} riadkov")
     
     
 def zrazky_sk():   
-    df = pd.DataFrame()
-    htmlfiles = Path(ZRAZKY_SK_DIR).glob('*.html')
-    for file_path in htmlfiles:
-        if file_path.stat().st_size > 0:
-            print(file_path)
-            tables = extract_tables_from_html(file_path,100)
-            for table in tables:
-                table['file'] = file_path.name.split('.')[0]
-                df = pd.concat([df, table])
-        # print(df.count().max())    
-        # if df.count().max() > 50000:
-        #     # logger.warning(f"Súbor {file_path} má viac ako 50 riadkov, skontrolujte správnosť údajov!")
-        #     break
-        else:
-            logger.error(f"Súbor {file_path} je prázdny")
-    df = df[df['Čas merania'] != 'Priemery:']
-    df['Cas_CET'] = pd.to_datetime(df['Čas merania'], format='%d.%m.%Y %H:%M')
+    dates = get_date_interval(ZRAZKY_SK_DIR)
+    for date in dates[:-1]:
+        print(f'Spracovávam teploty pre dátum: {date}')
+        df = pd.DataFrame()
+        htmlfiles = Path(ZRAZKY_SK_DIR).glob(f'*{date}*.html')
+        df = pd.DataFrame()
+        for file_path in htmlfiles:
+            if file_path.stat().st_size > 0:
+                print(file_path)
+                tables = extract_tables_from_html(file_path,100)
+                for table in tables:
+                    table['file'] = file_path.name.split('.')[0]
+                    df = pd.concat([df, table])
+            # print(df.count().max())    
+            # if df.count().max() > 50000:
+            #     # logger.warning(f"Súbor {file_path} má viac ako 50 riadkov, skontrolujte správnosť údajov!")
+            #     break
+            else:
+                logger.error(f"Súbor {file_path} je prázdny")
+        df = df[df['Čas merania'] != 'Priemery:']
+        df['Cas_CET'] = pd.to_datetime(df['Čas merania'], format='%d.%m.%Y %H:%M')
 
-    df = df.drop_duplicates(subset=['Stanica', 'Typ', 'Cas_CET'], keep='first').sort_values(by='Čas merania')
-    df = to_cat(df, ['Stanica', 'Typ']) # prevedenie na category - nie je permanentne
-    df = to_num(df, ['Zrážky 1h', 'Zrážky 3h', 'Zrážky 6h', 'Zrážky 12h', 'Zrážky 24h' ]) # prevedenie na float32
-    df = df.convert_dtypes(dtype_backend='pyarrow') # prevedenie vsetkych stlpcov na pyarrow dtype
-    
-    save_frame(df[['Stanica', 'Typ', 'Cas_CET', 'Zrážky 1h', 'Zrážky 24h']], RES_ZRAZKY_SK_DIR, 'zrazky_sk')    
-    logger.info(f"ZRAZKY_SK - {len(df)} riadkov")
-    
-def hladiny_sk():   
-    df = pd.DataFrame()
-    htmlfiles = Path(HLADINY_SK_DIR).glob('*.html')
-    for file_path in htmlfiles:
-        if file_path.stat().st_size > 0:
-            print(file_path)
-            tables = extract_tables_from_html(file_path,100)
-            for table in tables:
-                table['file'] = file_path.name.split('.')[0]
-                df = pd.concat([df, table])
-        else:
-            logger.error(f"Súbor {file_path} je prázdny")
-    df['Cas_CET'] = pd.to_datetime(df['Čas merania'], format='%d.%m.%Y %H:%M')
-    df = df.rename(columns={'Unnamed: 0': 'Typ'}) # premenovanie stlpca
-    df = df.drop_duplicates(subset=['Stanica', 'Tok', 'Cas_CET'], keep='first').sort_values(by='Cas_CET')
-    df = to_cat(df, ['Stanica', 'Tok', 'Typ']) # prevedenie na category - nie je permanentne
-    
-    df = df.convert_dtypes(dtype_backend='pyarrow') # prevedenie vsetkych stlpcov na pyarrow dtype, cisla su v integer
-    save_frame(df[['Stanica', 'Tok', 'Cas_CET', 'Vodný stav']], RES_HLADINY_SK_DIR, 'hladiny_sk')    
-    logger.info(f"HLADINY_SK - {len(df)} riadkov")
+        df = df.drop_duplicates(subset=['Stanica', 'Typ', 'Cas_CET'], keep='first').sort_values(by='Čas merania')
+        df = to_cat(df, ['Stanica', 'Typ']) # prevedenie na category - nie je permanentne
+        df = to_num(df, ['Zrážky 1h', 'Zrážky 3h', 'Zrážky 6h', 'Zrážky 12h', 'Zrážky 24h' ]) # prevedenie na float32
+        df = df.convert_dtypes(dtype_backend='pyarrow') # prevedenie vsetkych stlpcov na pyarrow dtype
+        
+        save_frame(df[['Stanica', 'Typ', 'Cas_CET', 'Zrážky 1h', 'Zrážky 24h']], RES_ZRAZKY_SK_DIR, f'{date}-zrazky_sk')    
+        logger.info(f"{date}-ZRAZKY_SK - {len(df)} riadkov")
+        
+def hladiny_sk():
+    dates = get_date_interval(HLADINY_SK_DIR)
+    for date in dates[:-1]:
+        print(f'Spracovávam teploty pre dátum: {date}')
+        df = pd.DataFrame()
+        htmlfiles = Path(HLADINY_SK_DIR).glob(f'*{date}*.html')
+        for file_path in htmlfiles:
+            if file_path.stat().st_size > 0:
+                print(file_path)
+                tables = extract_tables_from_html(file_path,100)
+                for table in tables:
+                    table['file'] = file_path.name.split('.')[0]
+                    df = pd.concat([df, table])
+            else:
+                logger.error(f"Súbor {file_path} je prázdny")
+        df['Cas_CET'] = pd.to_datetime(df['Čas merania'], format='%d.%m.%Y %H:%M')
+        df = df.rename(columns={'Unnamed: 0': 'Typ'}) # premenovanie stlpca
+        df = df.drop_duplicates(subset=['Stanica', 'Tok', 'Cas_CET'], keep='first').sort_values(by='Cas_CET')
+        df = to_cat(df, ['Stanica', 'Tok', 'Typ']) # prevedenie na category - nie je permanentne
+        
+        df = df.convert_dtypes(dtype_backend='pyarrow') # prevedenie vsetkych stlpcov na pyarrow dtype, cisla su v integer
+        save_frame(df[['Stanica', 'Tok', 'Cas_CET', 'Vodný stav']], RES_HLADINY_SK_DIR, f'{date}-hladiny_sk')    
+        logger.info(f"{date}-HLADINY_SK - {len(df)} riadkov")
     
 def podzemne_vody_sk():   
-    df_vrt = pd.DataFrame()
-    df_prm = pd.DataFrame()
-    htmlfiles = Path(PODZEMNE_VODY_SK_DIR).glob('*.html')
-    for file_path in htmlfiles:
-        if file_path.stat().st_size > 0:
-            print(file_path)
-            filename = file_path.name.split('.')[0]
-            [tablea,tableb] = extract_tables_from_html(file_path,100) # dve tabulky
-            tablea['file'] = filename
-            tableb['file'] = filename
-            df_vrt = pd.concat([df_vrt, tablea])
-            df_prm = pd.concat([df_prm, tableb])
-        else:
-            logger.error(f"Súbor {file_path} je prázdny")
-    df_vrtcols ={'Číslo stanice' : 'Stanica', 'Názov lokality' : 'Nazov_lok', 'Hĺbka vrtu [m]' : 'Hlbka_vrtu', 'Nadmorská výška terénu [m]' : 'vyska_terenu',
-               'Dátum a čas merania' : 'Cas', 'Úroveň podzemnej vody [m n.m.]' : 'uroven_PV'}
-    df_prmcols ={'Číslo stanice' : 'Stanica', 'Názov lokality' : 'Nazov_lok', 'Názov prameňa' : 'Nazov_prm', 'Nadmorská výška objektu [m]' : 'vyska_objektu',
-               'Dátum a čas merania' : 'Cas', 'Výdatnosť prameňa [l.s-1]' : 'vydatnost'}
-    df_vrt = df_vrt.rename(columns=df_vrtcols) # premenovanie stlpca
-    df_vrt['Cas_CET'] = pd.to_datetime(df_vrt['Cas'], format='%d.%m.%Y %H:%M')
-    df_vrt = df_vrt.drop_duplicates(subset=['Stanica', 'Nazov_lok', 'Povodie', 'Cas_CET'], keep='first').sort_values(by='Cas_CET')
-    df_vrt = to_cat(df_vrt, ['Stanica', 'Povodie', 'Nazov_lok']) # prevedenie na category - nie je permanentne
-    df_vrt = df_vrt.convert_dtypes(dtype_backend='pyarrow') # prevedenie vsetkych stlpcov na pyarrow dtype, cisla su v integer
-    df_vrt = df_vrt.sort_values(by=['Stanica', 'Nazov_lok', 'Cas_CET'])
-    
-    df_prm = df_prm.rename(columns=df_prmcols) # premenovanie stlpca
-    df_prm['Cas_CET'] = pd.to_datetime(df_prm['Cas'], format='%d.%m.%Y %H:%M')
-    df_prm = df_prm.drop_duplicates(subset=['Stanica', 'Nazov_lok', 'Povodie', 'Cas_CET'], keep='first').sort_values(by='Cas_CET')
-    df_prm = to_cat(df_prm, ['Stanica', 'Povodie', 'Nazov_lok']) # prevedenie na category - nie je permanentne
-    df_prm = df_prm.convert_dtypes(dtype_backend='pyarrow') # prevedenie vsetkych stlpcov na pyarrow dtype, cisla su v integer
-    df_prm = df_prm.sort_values(by=['Stanica', 'Nazov_prm', 'Cas_CET'])
-    
+    dates = get_date_interval(PODZEMNE_VODY_SK_DIR)
+    for date in dates[:-1]:
+        print(f'Spracovávam teploty pre dátum: {date}')
+        htmlfiles = Path(PODZEMNE_VODY_SK_DIR).glob(f'*{date}*.html')
+        df_vrt = pd.DataFrame()
+        df_prm = pd.DataFrame()
+        for file_path in htmlfiles:
+            if file_path.stat().st_size > 0:
+                print(file_path)
+                filename = file_path.name.split('.')[0]
+                [tablea,tableb] = extract_tables_from_html(file_path,100) # dve tabulky
+                tablea['file'] = filename
+                tableb['file'] = filename
+                df_vrt = pd.concat([df_vrt, tablea])
+                df_prm = pd.concat([df_prm, tableb])
+            else:
+                logger.error(f"Súbor {file_path} je prázdny")
+        df_vrtcols ={'Číslo stanice' : 'Stanica', 'Názov lokality' : 'Nazov_lok', 'Hĺbka vrtu [m]' : 'Hlbka_vrtu', 'Nadmorská výška terénu [m]' : 'vyska_terenu',
+                'Dátum a čas merania' : 'Cas', 'Úroveň podzemnej vody [m n.m.]' : 'uroven_PV'}
+        df_prmcols ={'Číslo stanice' : 'Stanica', 'Názov lokality' : 'Nazov_lok', 'Názov prameňa' : 'Nazov_prm', 'Nadmorská výška objektu [m]' : 'vyska_objektu',
+                'Dátum a čas merania' : 'Cas', 'Výdatnosť prameňa [l.s-1]' : 'vydatnost'}
+        df_vrt = df_vrt.rename(columns=df_vrtcols) # premenovanie stlpca
+        df_vrt['Cas_CET'] = pd.to_datetime(df_vrt['Cas'], format='%d.%m.%Y %H:%M')
+        df_vrt = df_vrt.drop_duplicates(subset=['Stanica', 'Nazov_lok', 'Povodie', 'Cas_CET'], keep='first').sort_values(by='Cas_CET')
+        df_vrt = to_cat(df_vrt, ['Stanica', 'Povodie', 'Nazov_lok']) # prevedenie na category - nie je permanentne
+        df_vrt = df_vrt.convert_dtypes(dtype_backend='pyarrow') # prevedenie vsetkych stlpcov na pyarrow dtype, cisla su v integer
+        df_vrt = df_vrt.sort_values(by=['Stanica', 'Nazov_lok', 'Cas_CET'])
+        
+        df_prm = df_prm.rename(columns=df_prmcols) # premenovanie stlpca
+        df_prm['Cas_CET'] = pd.to_datetime(df_prm['Cas'], format='%d.%m.%Y %H:%M')
+        df_prm = df_prm.drop_duplicates(subset=['Stanica', 'Nazov_lok', 'Povodie', 'Cas_CET'], keep='first').sort_values(by='Cas_CET')
+        df_prm = to_cat(df_prm, ['Stanica', 'Povodie', 'Nazov_lok']) # prevedenie na category - nie je permanentne
+        df_prm = df_prm.convert_dtypes(dtype_backend='pyarrow') # prevedenie vsetkych stlpcov na pyarrow dtype, cisla su v integer
+        df_prm = df_prm.sort_values(by=['Stanica', 'Nazov_prm', 'Cas_CET'])
+        
  
-    save_frame(df_vrt, RES_PODZEMNE_VODY_SK_DIR, 'PV_vrt_sk')    
-    save_frame(df_prm, RES_PODZEMNE_VODY_SK_DIR, 'PV_prm_sk')    
+    save_frame(df_vrt, RES_PODZEMNE_VODY_SK_DIR, f'{date}-PV_vrt_sk')    
+    save_frame(df_prm, RES_PODZEMNE_VODY_SK_DIR, f'{date}-PV_prm_sk')    
     
-    logger.info(f"PODZEMNE_VODY_SK - df_vrt {len(df_vrt)} riadkov")
-    logger.info(f"PODZEMNE_VODY_SK - df_prm {len(df_prm)} riadkov")
+    logger.info(f"{date}-PODZEMNE_VODY_SK - df_vrt {len(df_vrt)} riadkov")
+    logger.info(f"{date}-PODZEMNE_VODY_SK - df_prm {len(df_prm)} riadkov")
 
 
-def prietoky_sk():   
-    df = pd.DataFrame()
-    htmlfiles = Path(PRIETOKY_SK_DIR).glob('*.html')
-    for file_path in htmlfiles:
-        if file_path.stat().st_size > 0:
-            print(file_path)
-            tables = extract_tables_from_html(file_path,100)
-            #pattern pre datum a cas
-            regex_pattern = r'(?:<.*?>)?\s?(\d{1,2}\.\d{1,2}\.\d{4}) o (\d{1,2}:\d\d)'
-            [datum,cas] = extract_date_from_html(file_path, regex_pattern)
-            table=tables[0]
-            table['Cas_CET'] = dt.datetime.strptime(f'{datum} {cas}','%d.%m.%Y %H:%M')
-            table['file'] = file_path.name.split('.')[0]
-            df = pd.concat([df, table])
-        else:
-            logger.error(f"Súbor {file_path} je prázdny")
-    #cistenie dat
-    df.columns = df.columns.droplevel(1) # odstranenie viacriadkovych hlaviciek 
-    df = df.rename(columns={'∆H': 'dH', 'QM,N' : 'QMN'}) # premenovanie stlpca
-    df.Z = df.Z.replace('//', 0)    # nahradenie hodnoty  '//' na 0, OVERENE
-    df = df.drop_duplicates(df, keep='first').sort_values(by='Cas_CET') # odstranenie duplicit a zoradenie podla casu
-    
-    df = to_num(df, ['H','dH','Q','Tvo','Tvz','Z','QMN', 'PA']) # prevedenie na float32
-    df.L = df.L.astype('Int16') # prevedenie na Int16
-    df = to_cat(df, ['Stanica - tok','P']) # prevedenie na category - nie je permanentne 
-    df = df.convert_dtypes(dtype_backend='pyarrow') # prevedenie vsetkych stlpcov na pyarrow dtype
-    save_frame(df, RES_PRIETOKY_SK_DIR, 'prietoky_sk')
-    logger.info(f"PRIETOKY_SK - {len(df)} riadkov")
+def prietoky_sk():
+    dates = get_date_interval(PRIETOKY_SK_DIR)
+    for date in dates[:-1]:
+        print(f'Spracovávam teploty pre dátum: {date}')
+        htmlfiles = Path(PRIETOKY_SK_DIR).glob(f'*{date}*.html')
+        df = pd.DataFrame()
+        for file_path in htmlfiles:
+            if file_path.stat().st_size > 0:
+                print(file_path)
+                tables = extract_tables_from_html(file_path,100)
+                #pattern pre datum a cas
+                regex_pattern = r'(?:<.*?>)?\s?(\d{1,2}\.\d{1,2}\.\d{4}) o (\d{1,2}:\d\d)'
+                [datum,cas] = extract_date_from_html(file_path, regex_pattern)
+                table=tables[0]
+                table['Cas_CET'] = dt.datetime.strptime(f'{datum} {cas}','%d.%m.%Y %H:%M')
+                table['file'] = file_path.name.split('.')[0]
+                df = pd.concat([df, table])
+            else:
+                logger.error(f"Súbor {file_path} je prázdny")
+        #cistenie dat
+        df.columns = df.columns.droplevel(1) # odstranenie viacriadkovych hlaviciek 
+        df = df.rename(columns={'∆H': 'dH', 'QM,N' : 'QMN'}) # premenovanie stlpca
+        df.Z = df.Z.replace('//', 0)    # nahradenie hodnoty  '//' na 0, OVERENE
+        df = df.drop_duplicates(df, keep='first').sort_values(by='Cas_CET') # odstranenie duplicit a zoradenie podla casu
+        
+        df = to_num(df, ['H','dH','Q','Tvo','Tvz','Z','QMN', 'PA']) # prevedenie na float32
+        df.L = df.L.astype('Int16') # prevedenie na Int16
+        df = to_cat(df, ['Stanica - tok','P']) # prevedenie na category - nie je permanentne 
+        df = df.convert_dtypes(dtype_backend='pyarrow') # prevedenie vsetkych stlpcov na pyarrow dtype
+        save_frame(df, RES_PRIETOKY_SK_DIR, f'{date}-prietoky_sk')
+        logger.info(f"{date}-PRIETOKY_SK - {len(df)} riadkov")
     
 def log_elapsed_time(func):
     start = dt.datetime.now()
@@ -280,11 +299,39 @@ def log_elapsed_time(func):
     elapsed = dt.datetime.now() - start
     logger.info(f"{func.__name__}: Celkový čas spracovania: {elapsed}")
 
+def get_date_interval(datadir=TEPLOTY_SK_DIR):
+    '''zisti interval dat v adresaroch'''
+    htmlfiles = list(Path(datadir).glob('*.html'))
+    if len(htmlfiles) > 0:
+        dates = set()
+        for file_path in htmlfiles:
+            filename = file_path.name.split('.')[0]
+            date_str = filename[-16:-9]  # predpokladame format 'YYYY-MM-DD-HH-MM'
+            if date_str == '':
+                continue    
+            #dates.append(date_str)
+            
+            # date_obj = dt.datetime.strptime(date_str, '%Y-%m-%d-%H-%M')
+            # dates.append(date_obj)
+            dates.add(date_str)
+        min_date = min(dates)
+        max_date = max(dates)
+        logger_inf.info(f"Adresár {datadir} obsahuje dáta od {min_date} do {max_date}, počet súborov: {len(htmlfiles)}")
+        # return (min_date, max_date)
+        return sorted(dates)
+    else:
+        logger_inf.info(f"Adresár {datadir} neobsahuje žiadne HTML súbory.")
+
+
+
 def main():
+    
     workflow = [podzemne_vody_sk,prietoky_sk, hladiny_sk, zrazky_sk, zrazky_brezno, teploty]   
     workflow = [podzemne_vody_sk, prietoky_sk, hladiny_sk, zrazky_brezno, teploty] # zrazky_sk,
     workflow = [prietoky_sk]
     workflow = [zrazky_sk]
+    workflow = [zrazky_sk, zrazky_brezno, teploty]   
+    workflow = [podzemne_vody_sk, prietoky_sk, hladiny_sk]
     
     for func in workflow:
         log_elapsed_time(func)
