@@ -114,9 +114,9 @@ def to_cat(df, cols):
 
 def teploty():
     dates = get_date_interval(TEPLOTY_SK_DIR)
-    for date in dates[:-1]:
+    for date in dates:
         print(f'Spracovávam teploty pre dátum: {date}')
-        htmlfiles = Path(TEPLOTY_SK_DIR).glob(f'*{date}*.html')
+        htmlfiles = list(Path(TEPLOTY_SK_DIR).glob(f'*{date}*.html'))
         df = pd.DataFrame()
         for file_path in htmlfiles:
             if file_path.stat().st_size > 0:
@@ -137,19 +137,24 @@ def teploty():
                 logger.error(f"Súbor {file_path} je prázdny")
         df.drop_duplicates(inplace=True)
         df.sort_values(by=['Cas_CET'], inplace=True)
-        save_frame(df, RES_TEPLOTY_SK_DIR, f'{date}-teploty_sk')
+        save_frame(df, RES_TEPLOTY_SK_DIR, f'teploty_sk_{date}')
         
         brezno = df[df['Stanica'] == 'Brezno']
-        save_frame(brezno, RES_TEPLOTY_SK_DIR, f'{date}-teploty_brezno')
+        save_frame(brezno, RES_TEPLOTY_SK_DIR, f'teploty_brezno_{date}')
         logger.info(f"{date}-TEPLOTY_SK - {len(df)} riadkov")
         logger.info(f"{date}-TEPLOTY_BREZNO - {len(brezno)} riadkov")
-    
+        pack_to_zip(htmlfiles, RES_TEPLOTY_SK_DIR + f'teploty_sk_{date}.zip')
+        logger.info(f"{date}-teploty_sk - {len(htmlfiles)} suborov zabalených do ZIP")
+        if date != dates[-1]:  # neodstranuj subory pre aktualny mesiac
+            remove_files_list(htmlfiles)
+            logger.info(f"{date}-teploty_sk - {len(htmlfiles)} suborov odstránených")
+        
 def zrazky_brezno():   
     dates = get_date_interval(ZRAZKY_BREZNO_DIR)
-    for date in dates[:-1]:
+    for date in dates:
         print(f'Spracovávam teploty pre dátum: {date}')
         df = pd.DataFrame()
-        htmlfiles = Path(ZRAZKY_BREZNO_DIR).glob(f'*{date}*.html')
+        htmlfiles = list(Path(ZRAZKY_BREZNO_DIR).glob(f'*{date}*.html'))
         for file_path in htmlfiles:
             print(file_path)
             table = extract_tables_from_html(file_path,1)
@@ -158,16 +163,21 @@ def zrazky_brezno():
         
         df['Cas_CET'] = pd.to_datetime(df['Čas merania'], format='%d.%m.%Y %H:%M')
         df = df.drop_duplicates(df, keep='first').sort_values(by='Cas_CET')
-        save_frame(df, RES_ZRAZKY_BREZNO_DIR, f'{date}-zrazky_brezno')    
+        save_frame(df, RES_ZRAZKY_BREZNO_DIR, f'zrazky_brezno_{date}')    
         logger.info(f"{date}-ZRAZKY_BREZNO - {len(df)} riadkov")
-    
+        pack_to_zip(htmlfiles, RES_ZRAZKY_BREZNO_DIR + f'zrazky_brezno_{date}.zip')
+        logger.info(f"{date}-zrazky_brezno - {len(htmlfiles)} suborov zabalených do ZIP")
+        if date != dates[-1]:  # neodstranuj subory pre aktualny mesiac
+            remove_files_list(htmlfiles)
+            logger.info(f"{date}-zrazky_brezno - {len(htmlfiles)} suborov odstránených")
+        
     
 def zrazky_sk():   
     dates = get_date_interval(ZRAZKY_SK_DIR)
-    for date in dates[:-1]:
+    for date in dates:
         print(f'Spracovávam teploty pre dátum: {date}')
         df = pd.DataFrame()
-        htmlfiles = Path(ZRAZKY_SK_DIR).glob(f'*{date}*.html')
+        htmlfiles = list(Path(ZRAZKY_SK_DIR).glob(f'*{date}*.html'))
         df = pd.DataFrame()
         for file_path in htmlfiles:
             if file_path.stat().st_size > 0:
@@ -190,15 +200,20 @@ def zrazky_sk():
         df = to_num(df, ['Zrážky 1h', 'Zrážky 3h', 'Zrážky 6h', 'Zrážky 12h', 'Zrážky 24h' ]) # prevedenie na float32
         df = df.convert_dtypes(dtype_backend='pyarrow') # prevedenie vsetkych stlpcov na pyarrow dtype
         
-        save_frame(df[['Stanica', 'Typ', 'Cas_CET', 'Zrážky 1h', 'Zrážky 24h']], RES_ZRAZKY_SK_DIR, f'{date}-zrazky_sk')    
+        save_frame(df[['Stanica', 'Typ', 'Cas_CET', 'Zrážky 1h', 'Zrážky 24h']], RES_ZRAZKY_SK_DIR, f'zrazky_sk_{date}')    
         logger.info(f"{date}-ZRAZKY_SK - {len(df)} riadkov")
+        pack_to_zip(htmlfiles, RES_ZRAZKY_SK_DIR + f'zrazky_sk_{date}.zip')
+        logger.info(f"{date}-ZRAZKY_SK - {len(htmlfiles)} suborov zabalených do ZIP")
+        if date != dates[-1]:  # neodstranuj subory pre aktualny mesiac
+            remove_files_list(htmlfiles)
+            logger.info(f"{date}-ZRAZKY_SK - {len(htmlfiles)} suborov odstránených")
         
 def hladiny_sk():
     dates = get_date_interval(HLADINY_SK_DIR)
-    for date in dates[:-1]:
+    for date in dates:
         print(f'Spracovávam teploty pre dátum: {date}')
         df = pd.DataFrame()
-        htmlfiles = Path(HLADINY_SK_DIR).glob(f'*{date}*.html')
+        htmlfiles = list(Path(HLADINY_SK_DIR).glob(f'*{date}*.html'))
         for file_path in htmlfiles:
             if file_path.stat().st_size > 0:
                 print(file_path)
@@ -214,14 +229,19 @@ def hladiny_sk():
         df = to_cat(df, ['Stanica', 'Tok', 'Typ']) # prevedenie na category - nie je permanentne
         
         df = df.convert_dtypes(dtype_backend='pyarrow') # prevedenie vsetkych stlpcov na pyarrow dtype, cisla su v integer
-        save_frame(df[['Stanica', 'Tok', 'Cas_CET', 'Vodný stav']], RES_HLADINY_SK_DIR, f'{date}-hladiny_sk')    
+        save_frame(df[['Stanica', 'Tok', 'Cas_CET', 'Vodný stav']], RES_HLADINY_SK_DIR, f'hladiny_sk_{date}')    
         logger.info(f"{date}-HLADINY_SK - {len(df)} riadkov")
-    
+        pack_to_zip(htmlfiles, RES_HLADINY_SK_DIR + f'hladiny_sk_{date}.zip')
+        logger.info(f"{date}-HLADINY_SK - {len(htmlfiles)} suborov zabalených do ZIP")
+        if date != dates[-1]:  # neodstranuj subory pre aktualny mesiac
+            remove_files_list(htmlfiles)
+            logger.info(f"{date}-HLADINY_SK - {len(htmlfiles)} suborov odstránených")
+        
 def podzemne_vody_sk():   
     dates = get_date_interval(PODZEMNE_VODY_SK_DIR)
-    for date in dates[:-1]:
+    for date in dates:
         print(f'Spracovávam teploty pre dátum: {date}')
-        htmlfiles = Path(PODZEMNE_VODY_SK_DIR).glob(f'*{date}*.html')
+        htmlfiles = list(Path(PODZEMNE_VODY_SK_DIR).glob(f'*{date}*.html'))
         df_vrt = pd.DataFrame()
         df_prm = pd.DataFrame()
         for file_path in htmlfiles:
@@ -254,18 +274,23 @@ def podzemne_vody_sk():
         df_prm = df_prm.sort_values(by=['Stanica', 'Nazov_prm', 'Cas_CET'])
         
  
-    save_frame(df_vrt, RES_PODZEMNE_VODY_SK_DIR, f'{date}-PV_vrt_sk')    
-    save_frame(df_prm, RES_PODZEMNE_VODY_SK_DIR, f'{date}-PV_prm_sk')    
+        save_frame(df_vrt, RES_PODZEMNE_VODY_SK_DIR, f'PV_vrt_sk_{date}')    
+        save_frame(df_prm, RES_PODZEMNE_VODY_SK_DIR, f'PV_prm_sk_{date}')    
+        
+        logger.info(f"{date}-PODZEMNE_VODY_SK - df_vrt {len(df_vrt)} riadkov")
+        logger.info(f"{date}-PODZEMNE_VODY_SK - df_prm {len(df_prm)} riadkov")
+        pack_to_zip(htmlfiles, RES_PODZEMNE_VODY_SK_DIR + f'podzemne_vody_sk_{date}.zip')
+        logger.info(f"{date}-PODZEMNE_VODY_SK - {len(htmlfiles)} suborov zabalených do ZIP")
+        if date != dates[-1]:  # neodstranuj subory pre aktualny mesiac
+            remove_files_list(htmlfiles)
+            logger.info(f"{date}-PODZEMNE_VODY_SK - {len(htmlfiles)} suborov odstránených")
     
-    logger.info(f"{date}-PODZEMNE_VODY_SK - df_vrt {len(df_vrt)} riadkov")
-    logger.info(f"{date}-PODZEMNE_VODY_SK - df_prm {len(df_prm)} riadkov")
-
 
 def prietoky_sk():
     dates = get_date_interval(PRIETOKY_SK_DIR)
-    for date in dates[:-1]:
+    for date in dates:
         print(f'Spracovávam teploty pre dátum: {date}')
-        htmlfiles = Path(PRIETOKY_SK_DIR).glob(f'*{date}*.html')
+        htmlfiles = list(Path(PRIETOKY_SK_DIR).glob(f'*{date}*.html'))
         df = pd.DataFrame()
         for file_path in htmlfiles:
             if file_path.stat().st_size > 0:
@@ -290,17 +315,30 @@ def prietoky_sk():
         df.L = df.L.astype('Int16') # prevedenie na Int16
         df = to_cat(df, ['Stanica - tok','P']) # prevedenie na category - nie je permanentne 
         df = df.convert_dtypes(dtype_backend='pyarrow') # prevedenie vsetkych stlpcov na pyarrow dtype
-        save_frame(df, RES_PRIETOKY_SK_DIR, f'{date}-prietoky_sk')
+        # ulozenie spracovanych dat a vymazanie zdrojovych suborov - archivacia. POZOR aktualny mesiac sa nevymazava
+        save_frame(df, RES_PRIETOKY_SK_DIR, f'prietoky_sk_{date}')
         logger.info(f"{date}-PRIETOKY_SK - {len(df)} riadkov")
-    
-def log_elapsed_time(func):
-    start = dt.datetime.now()
-    func()
-    elapsed = dt.datetime.now() - start
-    logger.info(f"{func.__name__}: Celkový čas spracovania: {elapsed}")
+        pack_to_zip(htmlfiles, RES_PRIETOKY_SK_DIR + f'prietoky_sk_{date}.zip')
+        logger.info(f"{date}-PRIETOKY_SK - {len(htmlfiles)} suborov zabalených do ZIP")
+        if date != dates[-1]:  # neodstranuj subory pre aktualny mesiac
+            remove_files_list(htmlfiles)
+            logger.info(f"{date}-PRIETOKY_SK - {len(htmlfiles)} suborov odstránených")
+        
+
+def remove_files_list(to_delete):
+    '''odstrani zoznam suborov v zozname to_delete'''
+    import os
+    for file_path in to_delete:
+        try:
+            # pass
+            os.remove(file_path)
+            # logger.info(f'Odstránený súbor: {file_path}')
+        except Exception as e:
+            logger.error(f'Chyba pri odstraňovaní súboru {file_path}: {e}')
 
 def get_date_interval(datadir=TEPLOTY_SK_DIR):
-    '''zisti interval dat v adresaroch'''
+    '''zisti interval dat v adresaroch na zaklade nazvov html suborov
+    vrati zoznam datumov v poradi   '''
     htmlfiles = list(Path(datadir).glob('*.html'))
     if len(htmlfiles) > 0:
         dates = set()
@@ -310,28 +348,41 @@ def get_date_interval(datadir=TEPLOTY_SK_DIR):
             if date_str == '':
                 continue    
             #dates.append(date_str)
-            
             # date_obj = dt.datetime.strptime(date_str, '%Y-%m-%d-%H-%M')
             # dates.append(date_obj)
             dates.add(date_str)
         min_date = min(dates)
         max_date = max(dates)
         logger_inf.info(f"Adresár {datadir} obsahuje dáta od {min_date} do {max_date}, počet súborov: {len(htmlfiles)}")
-        # return (min_date, max_date)
         return sorted(dates)
     else:
         logger_inf.info(f"Adresár {datadir} neobsahuje žiadne HTML súbory.")
 
+def pack_to_zip(filelist, zipfilename):
+    '''zabali subory filelist do zip suboru zipfilename'''
+    import zipfile
+    with zipfile.ZipFile(zipfilename, 'w') as zipf:
+        for file in filelist:
+            zipf.write(file, arcname=Path(file).name)
+    logger.info(f'Vytvorený ZIP súbor: {zipfilename}')
 
+def log_elapsed_time(func):
+    start = dt.datetime.now()
+    func()
+    elapsed = dt.datetime.now() - start
+    logger.info(f"{func.__name__}: Celkový čas spracovania: {elapsed}")
 
 def main():
     
-    workflow = [podzemne_vody_sk,prietoky_sk, hladiny_sk, zrazky_sk, zrazky_brezno, teploty]   
     workflow = [podzemne_vody_sk, prietoky_sk, hladiny_sk, zrazky_brezno, teploty] # zrazky_sk,
     workflow = [prietoky_sk]
     workflow = [zrazky_sk]
     workflow = [zrazky_sk, zrazky_brezno, teploty]   
     workflow = [podzemne_vody_sk, prietoky_sk, hladiny_sk]
+    workflow = [teploty]
+    workflow = [prietoky_sk]
+    workflow = [podzemne_vody_sk,prietoky_sk, hladiny_sk, zrazky_sk, zrazky_brezno, teploty]   
+    workflow = [podzemne_vody_sk]
     
     for func in workflow:
         log_elapsed_time(func)

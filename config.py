@@ -1,6 +1,6 @@
 '''Configuration file for SHMU data processing'''
 
-SHMUDIR =f'/home/pp/program/jupyter/SHMU/' 
+SHMUDIR =f'/home/pp/program/jupyter/SHMUSSD/' 
 TOPDIR = SHMUDIR + r'zber/'
 TEPLOTY_SK_DIR = TOPDIR + r'teploty_sk/'
 ZRAZKY_BREZNO_DIR = TOPDIR + r'zrazky_brezno/'
