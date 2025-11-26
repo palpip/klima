@@ -9,30 +9,17 @@ Created on Mon Aug  5 10:20:00 2024
 
 import pandas as pd
 import re
-import openpyxl
 import datetime as dt
-import sqlite3
 import pyarrow as pa
-import logging
+# import openpyxl
+# import sqlite3
+# import logging
 
 from pathlib import Path
-from config import *
 import logging
 from sqlalchemy import create_engine
-
-# nastavenie logovania
-# logovanie do log.log - chyby/debug
-# logovanie do inf.log - informacie
-
-LOGFILE = "log1.log"
-LOGFILE_INF = "inf.log" 
-logger=logging.getLogger('log')
-logger.addHandler(logging.FileHandler(TOPDIR + LOGFILE, mode='w'))
-logger_inf = logging.getLogger('inf')
-logger_inf.addHandler(logging.FileHandler(TOPDIR + LOGFILE_INF, mode='w'))
-logger.setLevel(logging.DEBUG)
-logger_inf.setLevel(logging.DEBUG)
-
+from funcs import *
+from config import *
 
 
 def extract_tables_from_html(html_content, tableno = 0):
@@ -274,11 +261,11 @@ def podzemne_vody_sk():
         df_prm = df_prm.sort_values(by=['Stanica', 'Nazov_prm', 'Cas_CET'])
         
  
-        save_frame(df_vrt, RES_PODZEMNE_VODY_SK_DIR, f'PV_vrt_sk_{date}')    
-        save_frame(df_prm, RES_PODZEMNE_VODY_SK_DIR, f'PV_prm_sk_{date}')    
+        save_frame(df_vrt, RES_PODZEMNE_VODY_VRT_SK_DIR, f'PV_vrt_sk_{date}')    
+        save_frame(df_prm, RES_PODZEMNE_VODY_PRM_SK_DIR, f'PV_prm_sk_{date}')    
         
-        logger.info(f"{date}-PODZEMNE_VODY_SK - df_vrt {len(df_vrt)} riadkov")
-        logger.info(f"{date}-PODZEMNE_VODY_SK - df_prm {len(df_prm)} riadkov")
+        logger.info(f"{date}-PODZEMNE_VODY_VRT_SK - df_vrt {len(df_vrt)} riadkov")
+        logger.info(f"{date}-PODZEMNE_VODY_PRM_SK - df_prm {len(df_prm)} riadkov")
         pack_to_zip(htmlfiles, RES_PODZEMNE_VODY_SK_DIR + f'podzemne_vody_sk_{date}.zip')
         logger.info(f"{date}-PODZEMNE_VODY_SK - {len(htmlfiles)} suborov zabalených do ZIP")
         if date != dates[-1]:  # neodstranuj subory pre aktualny mesiac
@@ -330,8 +317,8 @@ def remove_files_list(to_delete):
     import os
     for file_path in to_delete:
         try:
-            # pass
-            os.remove(file_path)
+            pass
+            # os.remove(file_path)
             # logger.info(f'Odstránený súbor: {file_path}')
         except Exception as e:
             logger.error(f'Chyba pri odstraňovaní súboru {file_path}: {e}')

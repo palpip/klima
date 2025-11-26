@@ -8,31 +8,18 @@ dáta/sumáre a oddelí Breznianske dáta
 '''
 
 import pandas as pd
+import datetime as dt
 import re
 import openpyxl
-import datetime as dt
 import sqlite3
 import pyarrow
 import logging
 
 from pathlib import Path
 from config import *
-import logging
+from funcs import *
 
-# nastavenie logovania
-# logovanie do log.log - chyby/debug
-# logovanie do inf.log - informacie
-
-LOGFILE = "log1.log"
-LOGFILE_INF = "inf.log" 
-logger=logging.getLogger('log')
-logger.addHandler(logging.FileHandler(TOPDIR + LOGFILE, mode='a'))
-logger_inf = logging.getLogger('inf')
-logger_inf.addHandler(logging.FileHandler(TOPDIR + LOGFILE_INF, mode='a'))
-logger.setLevel(logging.DEBUG)
-logger_inf.setLevel(logging.DEBUG)
-
-pd.DataFrame().to_excel(TOPDATADIR + 'vystupxx.xlsx', sheet_name = 'info', index=False)  # vytvorenie prazdneho xlsx suboru
+pd.DataFrame().to_excel(TOPRESDIR + 'vystupxx.xlsx', sheet_name = 'info', index=False)  # vytvorenie prazdneho xlsx suboru
 # with pd.ExcelWriter(TOPDIR + 'vystup.xlsx', mode = 'w', engine='openpyxl') as EXCELWRITER:
 #     pd.DataFrame.to_excel(EXCELWRITER, sheet_name='info', index=False)
 
@@ -44,12 +31,12 @@ def save_frame(df, dirname, dfname):
     # df.to_excel(dirname + dfname + '.xlsx', sheet_name=dfname, index=False)
     
     print('-----', dirname + dfname + '.xlsx')
-    with pd.ExcelWriter(TOPDATADIR + 'vystupxx.xlsx', mode = 'a', engine='openpyxl', if_sheet_exists='replace') as EXCELWRITER:
+    with pd.ExcelWriter(TOPRESDIR + 'vystupxx.xlsx', mode = 'a', engine='openpyxl', if_sheet_exists='replace') as EXCELWRITER:
         df.to_excel(EXCELWRITER, sheet_name=dfname, index=False)
     
     # conn = sqlite3.connect(dirname + dfname + '.sqlite')
     # df.to_sql(dfname, conn, if_exists='replace', index=False)    
-    df.to_parquet(TOPDATADIR + dfname + '.parquet', engine='auto') 
+    df.to_parquet(TOPRESDIR + dfname + '.parquet', engine='auto') 
 
 
 
@@ -65,17 +52,17 @@ def teploty(infile=TEPLOTY_SK_DIR+'teploty_sk', lokalita='Brezno'):
     df_agg['Cas_CET'] = df_agg['Cas_CET'].dt.strftime('%Y-%m-%d')
     df_agg.sort_values(by=['Stanica','Cas_CET'], inplace=True)
     # save whole SK
-    # save_frame(df_agg,TOPDATADIR+DATADIRS[0], 'teploty_denne_sk')
+    # save_frame(df_agg,TOPRESDIR+DATADIRS[0], 'teploty_denne_sk')
     
     # filter lokalita
     # surove data pre lokalitu 
     df_lokalita_raw = df[df['Stanica'] == lokalita]
-    save_frame(df_lokalita_raw,TOPDATADIR+DATADIRS[0], 'teploty_'+ lokalita.replace(' - ', '_').lower())
-    print(TOPDATADIR+DATADIRS[0], f"teploty_{lokalita}", ' Saved')
+    save_frame(df_lokalita_raw,TOPRESDIR+DATADIRS[0], 'teploty_'+ lokalita.replace(' - ', '_').lower())
+    print(TOPRESDIR+DATADIRS[0], f"teploty_{lokalita}", ' Saved')
     
     df_lokalita_agg = df_agg[df_agg['Stanica'] == lokalita]
-    save_frame(df_lokalita_agg,TOPDATADIR+DATADIRS[0], 'teploty_denne_'+lokalita.replace(' - ', '_').lower())
-    print(TOPDATADIR+DATADIRS[0], f"teploty_denne_{lokalita}", ' Saved')
+    save_frame(df_lokalita_agg,TOPRESDIR+DATADIRS[0], 'teploty_denne_'+lokalita.replace(' - ', '_').lower())
+    print(TOPRESDIR+DATADIRS[0], f"teploty_denne_{lokalita}", ' Saved')
         
 def zrazky_sk(infile=ZRAZKY_SK_DIR + 'zrazky_sk', lokalita = 'Brezno'):
     df = pd.read_parquet(infile + '.parquet'   )
@@ -85,19 +72,19 @@ def zrazky_sk(infile=ZRAZKY_SK_DIR + 'zrazky_sk', lokalita = 'Brezno'):
     df_agg = df_agg.groupby(['Stanica', pd.Grouper(key='Cas_CET', freq='D')], observed=True)['Zrážky 1h'].agg(['sum', 'count']).reset_index()
     
     # save whole SK
-    save_frame(df_agg,TOPDATADIR+DATADIRS[2], 'zrazky_denne_sk')
+    save_frame(df_agg,TOPRESDIR+DATADIRS[2], 'zrazky_denne_sk')
        
     # filter lokalita
     # surove data pre lokalitu 
     df_lokalita_raw = df[df['Stanica'] == lokalita]
     df_lokalita_raw = df_lokalita_raw.sort_values(by='Cas_CET')
-    save_frame(df_lokalita_raw,TOPDATADIR+DATADIRS[2], 'zrazky_'+ lokalita.replace(' - ', '_').lower())
-    print(TOPDATADIR+DATADIRS[2], f"zrazky_{lokalita}", ' Saved')
+    save_frame(df_lokalita_raw,TOPRESDIR+DATADIRS[2], 'zrazky_'+ lokalita.replace(' - ', '_').lower())
+    print(TOPRESDIR+DATADIRS[2], f"zrazky_{lokalita}", ' Saved')
     
     df_lokalita_agg = df_agg[df_agg['Stanica'] == lokalita]
     # df_lokalita_agg = df_lokalita_agg.sort_values(by='Cas_CET')
-    save_frame(df_lokalita_agg,TOPDATADIR+DATADIRS[2], 'zrazky_denne_'+lokalita.replace(' - ', '_').lower())
-    print(TOPDATADIR+DATADIRS[2], f"zrazky_denne_{lokalita}", ' Saved')
+    save_frame(df_lokalita_agg,TOPRESDIR+DATADIRS[2], 'zrazky_denne_'+lokalita.replace(' - ', '_').lower())
+    print(TOPRESDIR+DATADIRS[2], f"zrazky_denne_{lokalita}", ' Saved')
     
     # save_frame(df, ZRAZKY_SK_DIR, 'zrazky_sk')    
     logger.info(f"ZRAZKY_SK - {len(df)} riadkov")
@@ -118,13 +105,13 @@ def hladiny_sk(lokalita='Brezno', tok='Hron'):
     # surove data pre lokalitu
     df_lokalita_raw = df[(df['Stanica'] == lokalita) & (df['Tok'] == tok)]
     df_lokalita_raw = df_lokalita_raw.sort_values(by='Cas_CET')
-    save_frame(df_lokalita_raw,TOPDATADIR+DATADIRS[3], 'hladiny_'+ lokalita.replace(' - ', '_').lower())
-    print(TOPDATADIR+DATADIRS[3], f"hladiny_{lokalita}", ' Saved')
+    save_frame(df_lokalita_raw,TOPRESDIR+DATADIRS[3], 'hladiny_'+ lokalita.replace(' - ', '_').lower())
+    print(TOPRESDIR+DATADIRS[3], f"hladiny_{lokalita}", ' Saved')
     # denné agregované data pre lokalitu
     df_lokalita_agg = df_agg[(df_agg['Stanica'] == lokalita) & (df_agg['Tok'] == tok)]
     df_lokalita_agg = df_lokalita_agg.sort_values(by='level_2')
-    save_frame(df_lokalita_agg,TOPDATADIR+DATADIRS[3], 'hladiny_denne_'+lokalita.replace(' - ', '_').lower())
-    print(TOPDATADIR+DATADIRS[3], f"hladiny denne_{lokalita}", ' Saved')
+    save_frame(df_lokalita_agg,TOPRESDIR+DATADIRS[3], 'hladiny_denne_'+lokalita.replace(' - ', '_').lower())
+    print(TOPRESDIR+DATADIRS[3], f"hladiny denne_{lokalita}", ' Saved')
     # filter by station and tok    
     logger.info(f"HLADINY_SK - {len(df)} riadkov")  
     
