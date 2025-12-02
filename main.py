@@ -369,7 +369,7 @@ def main():
     workflow = [teploty]
     workflow = [prietoky_sk]
     workflow = [podzemne_vody_sk,prietoky_sk, hladiny_sk, zrazky_sk, zrazky_brezno, teploty]   
-    workflow = [podzemne_vody_sk]
+    # workflow = [podzemne_vody_sk]
     
     for func in workflow:
         log_elapsed_time(func)

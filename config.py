@@ -8,7 +8,7 @@ ZRAZKY_SK_DIR = TOPDIR + r'zrazky_sk/'
 HLADINY_SK_DIR = TOPDIR + r'hladiny_sk/'
 PRIETOKY_SK_DIR = TOPDIR + r'prietoky_sk/'
 PODZEMNE_VODY_SK_DIR = TOPDIR + r'podzemne_vody_sk/'
-# odlisne adresare pre podzemne vody, lebo v jednom html subore su dve tabulky jedna data pre vrty a druha pre pramene
+# odlisne adresare pre podzemne vody, lebo v jednom html subore su dve tabulky jednadata pre vrty a v druhom pre pramene
 # PODZEMNE_VODY_PRM_SK_DIR = TOPDIR + r'podzemne_vody_prm_sk/'
 # PODZEMNE_VODY_VRT_SK_DIR = TOPDIR + r'podzemne_vody_vrt_sk/'
 
@@ -27,14 +27,21 @@ RES_PODZEMNE_VODY_VRT_SK_DIR = TOPRESDIR + r'podzemne_vody_vrt_sk/'
 TEMPTESTFILE = TEPLOTY_SK_DIR + '2025-07-30-15-00.html'
 UHRNTESTFILE = ZRAZKY_BREZNO_DIR + '2025-07-30-23-45.html'
 
-DATADIRS = ['teploty_sk/', 'zrazky_brezno/', 'zrazky_sk/', 'hladiny_sk/','prietoky_sk/','podzemne_vody_sk/']
-DATABASES = [
-    TEPLOTY_SK_DIR+'teploty_sk',
-    ZRAZKY_BREZNO_DIR + 'zrazky_brezno',
-    ZRAZKY_SK_DIR + 'zrazky_sk',
-    HLADINY_SK_DIR + 'hladiny_sk',
-    PRIETOKY_SK_DIR +'prietoky_sk',
-    PODZEMNE_VODY_SK_DIR + 'podzemne_vody_sk']
+# DATADIRS = ['teploty_sk/', 'zrazky_brezno/', 'zrazky_sk/', 'hladiny_sk/','prietoky_sk/','podzemne_vody_sk/']
+# DATABASES = [
+#     TEPLOTY_SK_DIR+'teploty_sk',
+#     ZRAZKY_BREZNO_DIR + 'zrazky_brezno',
+#     ZRAZKY_SK_DIR + 'zrazky_sk',
+#     HLADINY_SK_DIR + 'hladiny_sk',
+#     PRIETOKY_SK_DIR +'prietoky_sk',
+#     PODZEMNE_VODY_SK_DIR + 'podzemne_vody_sk']
 # DBFILES = [db+'.parquet' for db in DATABASES]
         
-
+# not used
+MEASUREMENTS = {
+    'teploty': 'Teplota vzduchu (°C)',
+    'zrazky_brezno': 'Úhrn zrážok (mm)',
+    'zrazky_sk': 'Úhrn zrážok (mm)',
+    'hladiny_sk': 'Vodný stav (cm)',
+    'prietoky_sk': 'Prietok (m3/s)',
+    'podzemne_vody_sk': 'Hladina podzemnej vody (m'}

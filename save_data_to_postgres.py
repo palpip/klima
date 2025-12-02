@@ -2,8 +2,8 @@
 # -*- coding: utf-8 -*-
 '''
 Module for SHMU data and databases processing
-modul nacitava hotove databazy a uklada ich do postgresql
-ziadnu inu funkcionalitu nema'''
+modul nacitava hotove databazy a uklada ich do postgresql.
+Následne vytvorí pohľady pre sumáre '''
 
 import pandas as pd
 import pyarrow as pa
