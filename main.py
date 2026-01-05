@@ -73,7 +73,7 @@ def save_frame(df, dirname, dfname):
     df.to_parquet(dirname + dfname + '.parquet', engine='auto')
 
 
-    engine = create_engine('postgresql://pp:ppp@192.168.1.88:5432/shmu')
+    engine = create_engine('postgresql://pp:ppp@192.168.1.105:5432/shmu')
     df.to_sql(dfname, engine, if_exists='replace', index=False)
 
 def to_num(df, cols):
@@ -250,6 +250,8 @@ def podzemne_vody_sk():
         df_vrt['Cas_CET'] = pd.to_datetime(df_vrt['Cas'], format='%d.%m.%Y %H:%M')
         df_vrt = df_vrt.drop_duplicates(subset=['Stanica', 'Nazov_lok', 'Povodie', 'Cas_CET'], keep='first').sort_values(by='Cas_CET')
         df_vrt = to_cat(df_vrt, ['Stanica', 'Povodie', 'Nazov_lok']) # prevedenie na category - nie je permanentne
+        df_vrt = to_num(df_vrt, ['vyska_terenu', 'Hlbka_vrtu']) # prevedenie na numeric
+        
         df_vrt = df_vrt.convert_dtypes(dtype_backend='pyarrow') # prevedenie vsetkych stlpcov na pyarrow dtype, cisla su v integer
         df_vrt = df_vrt.sort_values(by=['Stanica', 'Nazov_lok', 'Cas_CET'])
         
@@ -257,6 +259,7 @@ def podzemne_vody_sk():
         df_prm['Cas_CET'] = pd.to_datetime(df_prm['Cas'], format='%d.%m.%Y %H:%M')
         df_prm = df_prm.drop_duplicates(subset=['Stanica', 'Nazov_lok', 'Povodie', 'Cas_CET'], keep='first').sort_values(by='Cas_CET')
         df_prm = to_cat(df_prm, ['Stanica', 'Povodie', 'Nazov_lok']) # prevedenie na category - nie je permanentne
+        df_prm = to_num(df_prm, ['vyska_objektu', 'vydatnost']) # prevedenie na category - nie je permanentne
         df_prm = df_prm.convert_dtypes(dtype_backend='pyarrow') # prevedenie vsetkych stlpcov na pyarrow dtype, cisla su v integer
         df_prm = df_prm.sort_values(by=['Stanica', 'Nazov_prm', 'Cas_CET'])
         
@@ -298,7 +301,7 @@ def prietoky_sk():
         df.Z = df.Z.replace('//', 0)    # nahradenie hodnoty  '//' na 0, OVERENE
         df = df.drop_duplicates(df, keep='first').sort_values(by='Cas_CET') # odstranenie duplicit a zoradenie podla casu
         
-        df = to_num(df, ['H','dH','Q','Tvo','Tvz','Z','QMN', 'PA']) # prevedenie na float32
+        df = to_num(df, ['H','L','dH','Q','Tvo','Tvz','Z','QMN', 'PA']) # prevedenie na float32
         df.L = df.L.astype('Int16') # prevedenie na Int16
         df = to_cat(df, ['Stanica - tok','P']) # prevedenie na category - nie je permanentne 
         df = df.convert_dtypes(dtype_backend='pyarrow') # prevedenie vsetkych stlpcov na pyarrow dtype
