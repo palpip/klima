@@ -19,6 +19,7 @@ import logging
 from pathlib import Path
 from config import *
 from funcs import *
+from sqlalchemy import create_engine
 
 pd.DataFrame().to_excel(TOPRESDIR + 'vystupxx.xlsx', sheet_name = 'info', index=False)  # vytvorenie prazdneho xlsx suboru
 # with pd.ExcelWriter(TOPDIR + 'vystup.xlsx', mode = 'w', engine='openpyxl') as EXCELWRITER:
@@ -73,26 +74,29 @@ def read_parquets(directory, filter_query=None):
         dfs = [pd.read_parquet(f) for f in files]  
     else:   
         dfs = [pd.read_parquet(f).query(filter_query) for f in files]   
-    return  pd.concat(dfs, ignore_index=True)
-
+    
+    retval =  pd.concat(dfs, ignore_index=True)
+    retval = remove_duplicates(retval)
+    return retval
 
 def save_frame(df, dirname, dfname):
     '''ulozi dataframes v adresari dirname vo formate
     dfname.csv, dfname.xlsx, dfname.sqlite3'''
-    # len breznovskych dat
-    # df.to_csv(dirname + dfname + '.csv')
-    # df.to_excel(dirname + dfname + '.xlsx', sheet_name=dfname, index=False)
     
     print('-----', dirname + dfname + '.xlsx')
     with pd.ExcelWriter(TOPRESDIR + 'vystupxx.xlsx', mode = 'a', engine='openpyxl', if_sheet_exists='replace') as EXCELWRITER:
         df.to_excel(EXCELWRITER, sheet_name=dfname, index=False)
     
+    # ciastkove ulozenie do sqlite3 - nepouzivane
     # conn = sqlite3.connect(dirname + dfname + '.sqlite')
     # df.to_sql(dfname, conn, if_exists='replace', index=False)
     
-    # engine = create_engine('postgresql://pp:ppp@192.168.1.88:5432/shmu')
+    # ciastkove ulozenie do postgresql - nepouzivane
+    # engine = create_engine(CONNSTR)
     # df.to_sql(dfname, engine, if_exists='replace', index=False)
-    df.to_parquet(TOPRESDIR + dfname + '.parquet', engine='auto') 
+    
+    # ciastkove ulozenie do parquet - nepouzivane
+    # df.to_parquet(TOPRESDIR + dfname + '.parquet', engine='auto') 
 
 
 
@@ -108,8 +112,6 @@ def teploty(infile=RES_TEPLOTY_SK_DIR, lokalita='Brezno'):
     df_agg.reset_index(inplace=True)
     df_agg['Cas_CET'] = df_agg['Cas_CET'].dt.strftime('%Y-%m-%d')
     df_agg.sort_values(by=['Stanica','Cas_CET'], inplace=True)
-    # save whole SK
-    # save_frame(df_agg,TOPRESDIR+RES_TEPLOTY_SK_DIR, 'teploty_denne_sk')
     
     # filter lokalita
     # surove data pre lokalitu 
@@ -148,7 +150,7 @@ def zrazky_sk(infile=RES_ZRAZKY_SK_DIR, lokalita = 'Brezno'):
 
 def hladiny_sk(infile=RES_HLADINY_SK_DIR, lokalita='Brezno', tok='Hron'):   
     df = read_parquets(infile) # + '.parquet'   )
-    df = df.drop_duplicates(df, keep='first').sort_values(by='Cas_CET')
+    # df = df.drop_duplicates(keep='first').sort_values(by='Cas_CET')
     # grouped/aggregated by station
     df_agg = df
     df_agg = df_agg.groupby(['Stanica','Tok', pd.Grouper(key='Cas_CET', freq='D')], observed=True)['Vodný stav'].agg(['min', 'max', 'mean']).reset_index()
@@ -169,14 +171,14 @@ def hladiny_sk(infile=RES_HLADINY_SK_DIR, lokalita='Brezno', tok='Hron'):
     df_lokalita_agg = df_lokalita_agg.sort_values(by='level_2')
     save_frame(df_lokalita_agg, RES_HLADINY_SK_DIR, 'hladiny_denne_'+lokalita.replace(' - ', '_').lower())
     print(RES_HLADINY_SK_DIR, f"hladiny denne_{lokalita}", ' Saved')
-    # filter by station and tok    
+    # filter by statio n and tok    
     logger.info(f"HLADINY_SK - {len(df)} riadkov")  
     
 
 
 def prietoky_sk(infile=RES_PRIETOKY_SK_DIR, lokalita='Brezno - Hron'):   
     df = read_parquets(infile) # + '.parquet'   )
-    df = df.drop_duplicates(df, keep='first').sort_values(by='Cas_CET')
+    # df = df.drop_duplicates(keep='first').sort_values(by='Cas_CET')
     dfb = df[df['Stanica - tok'] == lokalita]
     dfb.loc[:,['Cas_CET']] = pd.to_datetime(dfb['Cas_CET'].dt.date, errors='coerce')
     dfb = dfb.sort_values(by='Cas_CET')    
@@ -188,14 +190,19 @@ def prietoky_sk(infile=RES_PRIETOKY_SK_DIR, lokalita='Brezno - Hron'):
 
 def podzemne_vody_prm_sk(infile=RES_PODZEMNE_VODY_PRM_SK_DIR):
     df = read_parquets(infile) # + '.parquet')
-    df = df.drop_duplicates(df, keep='first').sort_values(by='Cas_CET')
+    # print(df.count())
+    # df = df.drop_duplicates(keep='first').sort_values(by='Cas_CET')
+    # print(df.count())
+    # df = df.drop_duplicates(subset=['Cas_CET', 'Stanica']).sort_values(by='Cas_CET')
+    # print(df.count())
+    
     save_frame(df, RES_PODZEMNE_VODY_PRM_SK_DIR, 'podzemne_vody_prm_sk')    
     logger.info(f"PODZEMNE_VODY_PRM_SK - {len(df)} riadkov")
     return   
 
 def podzemne_vody_vrt_sk(infile=RES_PODZEMNE_VODY_VRT_SK_DIR):
     df = read_parquets(infile) # + '.parquet')
-    df = df.drop_duplicates(df, keep='first').sort_values(by='Cas_CET')
+    # df = df.drop_duplicates(keep='first').sort_values(by='Cas_CET')
     save_frame(df, RES_PODZEMNE_VODY_VRT_SK_DIR, 'podzemne_vody_vrt_sk')    
     logger.info(f"PODZEMNE_VODY_VRT_SK - {len(df)} riadkov")
     return   
@@ -206,9 +213,12 @@ def log_elapsed_time(func):
     elapsed = dt.datetime.now() - start
     logger.info(f"{func.__name__}: Celkový čas spracovania: {elapsed}")
 
+
 def main():
     
     workflow = [podzemne_vody_prm_sk, podzemne_vody_vrt_sk, prietoky_sk, hladiny_sk, zrazky_sk, teploty]
+    #workflow = [zrazky_sk, teploty]
+    workflow = [prietoky_sk]
     for func in workflow:
         log_elapsed_time(func)
     print('done')

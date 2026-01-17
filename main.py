@@ -48,7 +48,7 @@ def extract_date_from_html(htmlfile, regex_pattern):
     :param regex_pattern: str, regex pattern to match the date
     :return: extracted date and time as a list    
     """
-    with open(htmlfile, 'r') as file:
+    with open(file=htmlfile, mode='r', encoding='utf-8') as file:
         retval = re.findall(regex_pattern, file.read())
     return [retval[0][0], retval[0][1]] 
     
@@ -66,14 +66,14 @@ def save_frame(df, dirname, dfname):
     '''ulozi dataframes v adresari dirname vo formate
     dfname.csv, dfname.xlsx, dfname.sqlite3'''
     df.to_csv(dirname + dfname + '.csv')
-    #df.to_excel(dirname + dfname + '.xlsx')
+    # df.to_excel(dirname + dfname + '.xlsx')
     # conn = sqlite3.connect(dirname + dfname + '.sqlite')
     # df.to_sql(dfname, conn, if_exists='replace', index=False)
     # conn.close()
     df.to_parquet(dirname + dfname + '.parquet', engine='auto')
 
 
-    engine = create_engine('postgresql://pp:ppp@192.168.1.105:5432/shmu')
+    engine = create_engine(CONNSTR)
     df.to_sql(dfname, engine, if_exists='replace', index=False)
 
 def to_num(df, cols):
@@ -122,7 +122,8 @@ def teploty():
                 # print(df)
             else:
                 logger.error(f"Súbor {file_path} je prázdny")
-        df.drop_duplicates(inplace=True)
+        # df.drop_duplicates(inplace=True)
+        df =remove_duplicates(df)
         df.sort_values(by=['Cas_CET'], inplace=True)
         save_frame(df, RES_TEPLOTY_SK_DIR, f'teploty_sk_{date}')
         
@@ -149,7 +150,8 @@ def zrazky_brezno():
             df = pd.concat([df, table])
         
         df['Cas_CET'] = pd.to_datetime(df['Čas merania'], format='%d.%m.%Y %H:%M')
-        df = df.drop_duplicates(df, keep='first').sort_values(by='Cas_CET')
+        # df = df.drop_duplicates(df, keep='first').sort_values(by='Cas_CET')
+        df = remove_duplicates(df).sort_values(by='Cas_CET')
         save_frame(df, RES_ZRAZKY_BREZNO_DIR, f'zrazky_brezno_{date}')    
         logger.info(f"{date}-ZRAZKY_BREZNO - {len(df)} riadkov")
         pack_to_zip(htmlfiles, RES_ZRAZKY_BREZNO_DIR + f'zrazky_brezno_{date}.zip')
@@ -182,12 +184,14 @@ def zrazky_sk():
         df = df[df['Čas merania'] != 'Priemery:']
         df['Cas_CET'] = pd.to_datetime(df['Čas merania'], format='%d.%m.%Y %H:%M')
 
-        df = df.drop_duplicates(subset=['Stanica', 'Typ', 'Cas_CET'], keep='first').sort_values(by='Čas merania')
+        # df = df.drop_duplicates(subset=['Stanica', 'Typ', 'Cas_CET'], keep='first').sort_values(by='Čas merania')
+        df = remove_duplicates(df).sort_values(by='Cas_CET')
+        
         df = to_cat(df, ['Stanica', 'Typ']) # prevedenie na category - nie je permanentne
-        df = to_num(df, ['Zrážky 1h', 'Zrážky 3h', 'Zrážky 6h', 'Zrážky 12h', 'Zrážky 24h' ]) # prevedenie na float32
+        df = to_num(df, ['Zrážky 1h', 'Zrážky 3h', 'Zrážky 6h', 'Zrážky 12h', 'Zrážky 24h']) # prevedenie na float32
         df = df.convert_dtypes(dtype_backend='pyarrow') # prevedenie vsetkych stlpcov na pyarrow dtype
         
-        save_frame(df[['Stanica', 'Typ', 'Cas_CET', 'Zrážky 1h', 'Zrážky 24h']], RES_ZRAZKY_SK_DIR, f'zrazky_sk_{date}')    
+        save_frame(df[['Stanica', 'Typ', 'Cas_CET', 'Zrážky 1h', 'Zrážky 24h', 'file']], RES_ZRAZKY_SK_DIR, f'zrazky_sk_{date}')    
         logger.info(f"{date}-ZRAZKY_SK - {len(df)} riadkov")
         pack_to_zip(htmlfiles, RES_ZRAZKY_SK_DIR + f'zrazky_sk_{date}.zip')
         logger.info(f"{date}-ZRAZKY_SK - {len(htmlfiles)} suborov zabalených do ZIP")
@@ -212,11 +216,11 @@ def hladiny_sk():
                 logger.error(f"Súbor {file_path} je prázdny")
         df['Cas_CET'] = pd.to_datetime(df['Čas merania'], format='%d.%m.%Y %H:%M')
         df = df.rename(columns={'Unnamed: 0': 'Typ'}) # premenovanie stlpca
-        df = df.drop_duplicates(subset=['Stanica', 'Tok', 'Cas_CET'], keep='first').sort_values(by='Cas_CET')
+        # df = df.drop_duplicates(subset=['Stanica', 'Tok', 'Cas_CET'], keep='first').sort_values(by='Cas_CET')
+        df = remove_duplicates(df).sort_values(by='Cas_CET')
         df = to_cat(df, ['Stanica', 'Tok', 'Typ']) # prevedenie na category - nie je permanentne
-        
         df = df.convert_dtypes(dtype_backend='pyarrow') # prevedenie vsetkych stlpcov na pyarrow dtype, cisla su v integer
-        save_frame(df[['Stanica', 'Tok', 'Cas_CET', 'Vodný stav']], RES_HLADINY_SK_DIR, f'hladiny_sk_{date}')    
+        save_frame(df[['Stanica', 'Tok', 'Cas_CET', 'Vodný stav', 'file']], RES_HLADINY_SK_DIR, f'hladiny_sk_{date}')    
         logger.info(f"{date}-HLADINY_SK - {len(df)} riadkov")
         pack_to_zip(htmlfiles, RES_HLADINY_SK_DIR + f'hladiny_sk_{date}.zip')
         logger.info(f"{date}-HLADINY_SK - {len(htmlfiles)} suborov zabalených do ZIP")
@@ -248,7 +252,8 @@ def podzemne_vody_sk():
                 'Dátum a čas merania' : 'Cas', 'Výdatnosť prameňa [l.s-1]' : 'vydatnost'}
         df_vrt = df_vrt.rename(columns=df_vrtcols) # premenovanie stlpca
         df_vrt['Cas_CET'] = pd.to_datetime(df_vrt['Cas'], format='%d.%m.%Y %H:%M')
-        df_vrt = df_vrt.drop_duplicates(subset=['Stanica', 'Nazov_lok', 'Povodie', 'Cas_CET'], keep='first').sort_values(by='Cas_CET')
+        # df_vrt = df_vrt.drop_duplicates(subset=['Stanica', 'Nazov_lok', 'Povodie', 'Cas_CET'], keep='first').sort_values(by='Cas_CET')
+        df_vrt = remove_duplicates(df_vrt).sort_values(by='Cas_CET')
         df_vrt = to_cat(df_vrt, ['Stanica', 'Povodie', 'Nazov_lok']) # prevedenie na category - nie je permanentne
         df_vrt = to_num(df_vrt, ['vyska_terenu', 'Hlbka_vrtu']) # prevedenie na numeric
         
@@ -257,7 +262,8 @@ def podzemne_vody_sk():
         
         df_prm = df_prm.rename(columns=df_prmcols) # premenovanie stlpca
         df_prm['Cas_CET'] = pd.to_datetime(df_prm['Cas'], format='%d.%m.%Y %H:%M')
-        df_prm = df_prm.drop_duplicates(subset=['Stanica', 'Nazov_lok', 'Povodie', 'Cas_CET'], keep='first').sort_values(by='Cas_CET')
+        # df_prm = df_prm.drop_duplicates(subset=['Stanica', 'Nazov_lok', 'Povodie', 'Cas_CET'], keep='first').sort_values(by='Cas_CET')
+        df_prm = remove_duplicates(df_prm).sort_values(by='Cas_CET')    
         df_prm = to_cat(df_prm, ['Stanica', 'Povodie', 'Nazov_lok']) # prevedenie na category - nie je permanentne
         df_prm = to_num(df_prm, ['vyska_objektu', 'vydatnost']) # prevedenie na category - nie je permanentne
         df_prm = df_prm.convert_dtypes(dtype_backend='pyarrow') # prevedenie vsetkych stlpcov na pyarrow dtype, cisla su v integer
@@ -299,8 +305,8 @@ def prietoky_sk():
         df.columns = df.columns.droplevel(1) # odstranenie viacriadkovych hlaviciek 
         df = df.rename(columns={'∆H': 'dH', 'QM,N' : 'QMN'}) # premenovanie stlpca
         df.Z = df.Z.replace('//', 0)    # nahradenie hodnoty  '//' na 0, OVERENE
-        df = df.drop_duplicates(df, keep='first').sort_values(by='Cas_CET') # odstranenie duplicit a zoradenie podla casu
-        
+        # df = df.drop_duplicates(df, keep='first').sort_values(by='Cas_CET') # odstranenie duplicit a zoradenie podla casu
+        df = remove_duplicates(df).sort_values(by='Cas_CET')
         df = to_num(df, ['H','L','dH','Q','Tvo','Tvz','Z','QMN', 'PA']) # prevedenie na float32
         df.L = df.L.astype('Int16') # prevedenie na Int16
         df = to_cat(df, ['Stanica - tok','P']) # prevedenie na category - nie je permanentne 
@@ -373,10 +379,14 @@ def main():
     workflow = [prietoky_sk]
     workflow = [podzemne_vody_sk,prietoky_sk, hladiny_sk, zrazky_sk, zrazky_brezno, teploty]   
     # workflow = [podzemne_vody_sk]
-    
+    workflow = [zrazky_sk, zrazky_brezno, teploty]
+    workflow = [prietoky_sk]
+     
     for func in workflow:
         log_elapsed_time(func)
     print('done')
 
+def main1():
+  print ()
 if __name__ == "__main__":
     main()  
