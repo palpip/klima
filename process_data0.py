@@ -21,6 +21,8 @@ from config import *
 from funcs import *
 from sqlalchemy import create_engine
 
+
+
 pd.DataFrame().to_excel(TOPRESDIR + 'vystupxx.xlsx', sheet_name = 'info', index=False)  # vytvorenie prazdneho xlsx suboru
 # with pd.ExcelWriter(TOPDIR + 'vystup.xlsx', mode = 'w', engine='openpyxl') as EXCELWRITER:
 #     pd.DataFrame.to_excel(EXCELWRITER, sheet_name='info', index=False)
@@ -218,7 +220,7 @@ def main():
     
     workflow = [podzemne_vody_prm_sk, podzemne_vody_vrt_sk, prietoky_sk, hladiny_sk, zrazky_sk, teploty]
     #workflow = [zrazky_sk, teploty]
-    workflow = [prietoky_sk]
+    # workflow = [prietoky_sk]
     for func in workflow:
         log_elapsed_time(func)
     print('done')

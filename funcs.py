@@ -56,15 +56,25 @@ def remove_duplicates(df):
     print(f"zaznamov: {nr_records}, duplikatov:  {nr_records - df.Cas_CET.count()}")
     return df
 
+def create_logger(logname):
+    '''Create and return a logger with the specified name'''
+    logger = logging.getLogger(logname)
+    logger.addHandler(logging.FileHandler(TOPDIR + f"{logname}{dt.datetime.now().strftime('%Y%m%d%H%M%S')}.log", mode='w'))
+    logger.setLevel(logging.DEBUG)
+    return logger
 
-LOGFILE = "log1.log"
-LOGFILE_INF = "inf.log" 
-logger=logging.getLogger('log')
-logger.addHandler(logging.FileHandler(TOPDIR + LOGFILE, mode='w'))
-logger_inf = logging.getLogger('inf')
-logger_inf.addHandler(logging.FileHandler(TOPDIR + LOGFILE_INF, mode='w'))
-logger.setLevel(logging.DEBUG)
-logger_inf.setLevel(logging.DEBUG)
+logger = create_logger('log')
+logger_inf = create_logger('inf')
+
+
+# LOGFILE = "log1.log"
+# LOGFILE_INF = "inf.log" 
+# logger=logging.getLogger('log')
+# logger.addHandler(logging.FileHandler(TOPDIR + LOGFILE, mode='w'))
+# logger_inf = logging.getLogger('inf')
+# logger_inf.addHandler(logging.FileHandler(TOPDIR + LOGFILE_INF, mode='w'))
+# logger.setLevel(logging.DEBUG)
+# logger_inf.setLevel(logging.DEBUG)
 
 #------------------
 # not used - automatic selection of connection string and data directory
