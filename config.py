@@ -3,9 +3,9 @@
 CONNSTRS = ['postgresql://pp:ppp@192.168.1.105:5432/shmu',  # database connection string doma
             'postgresql://pp:ppp@172.16.0.119:5432/shmu']   # database connection string ENVIGEO - postgresql server
 
-SHMUDIRS =[f'/home/pp/program/jupyter/SHMUSSD/',f'f:/AAA/DATA/SHMU/']  # possible SHMU data directories
-SHMUDIR = SHMUDIRS[0]  # select the appropriate SHMU data directory
-CONNSTR = CONNSTRS[0]  # select the appropriate database connection string
+SHMUDIRS =[f'/home/pp/program/jupyter/SHMUSSD/',f'f:/AAA/DATA/SHMU/', f'C:/Users/envigeo/program/python/klima/SHMU/']  # possible SHMU data directories
+SHMUDIR = SHMUDIRS[2]  # select the appropriate SHMU data directory
+CONNSTR = CONNSTRS[1]  # select the appropriate database connection string
 
 TOPDIR = SHMUDIR + r'zber/'
 TEPLOTY_SK_DIR = TOPDIR + r'teploty_sk/'
