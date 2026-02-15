@@ -67,16 +67,24 @@ def save_frame(df, dirname, dfname):
     '''ulozi dataframes v adresari dirname vo formate
     dfname.csv, dfname.xlsx, dfname.sqlite3'''
     df.to_csv(dirname + dfname + '.csv')
+    log_inf.info(f"{dirname} - {dfname} {len(df)} riadkov saved to csv")
+    
+    df.to_parquet(dirname + dfname + '.parquet', engine='auto')
+    log_inf.info(f"{dirname} - {dfname} {len(df)} riadkov saved to parquet")
+    
+    engine = create_engine(CONNSTR)
+    df.to_sql(dfname, engine, if_exists='replace', index=False)
+    log_inf.info(f"{dfname} {len(df)} riadkov saved to database")
+   
     # df.to_excel(dirname + dfname + '.xlsx')
+    # log_inf.info(f"{dirname}{dfname} {len(df)} riadkov saved to excel")
+
     # conn = sqlite3.connect(dirname + dfname + '.sqlite')
     # df.to_sql(dfname, conn, if_exists='replace', index=False)
     # conn.close()
-    df.to_parquet(dirname + dfname + '.parquet', engine='auto')
-
-
-    engine = create_engine(CONNSTR)
-    df.to_sql(dfname, engine, if_exists='replace', index=False)
-
+    # log_inf.info(f"{dirname} - {dfname} {len(df)} riadkov saved to sqlite")
+    
+    
 def to_num(df, cols):
     '''prevedie stlpce cols na numeric'''
     for col in cols:
@@ -122,7 +130,7 @@ def teploty():
                 df = pd.concat([df, table])
                 # print(df)
             else:
-                logger.error(f"Súbor {file_path} je prázdny")
+                log_err.error(f"Súbor {file_path} je prázdny")
         # df.drop_duplicates(inplace=True)
         df =remove_duplicates(df)
         df.sort_values(by=['Cas_CET'], inplace=True)
@@ -130,13 +138,13 @@ def teploty():
         
         brezno = df[df['Stanica'] == 'Brezno']
         save_frame(brezno, RES_TEPLOTY_SK_DIR, f'teploty_brezno_{date}')
-        logger_inf.info(f"{date}-TEPLOTY_SK - {len(df)} riadkov")
-        logger_inf.info(f"{date}-TEPLOTY_BREZNO - {len(brezno)} riadkov")
+        log_inf.info(f"{date}-TEPLOTY_SK - {len(df)} riadkov")
+        log_inf.info(f"{date}-TEPLOTY_BREZNO - {len(brezno)} riadkov")
         pack_to_zip(htmlfiles, RES_TEPLOTY_SK_DIR + f'teploty_sk_{date}.zip')
-        logger_inf.info(f"{date}-teploty_sk - {len(htmlfiles)} suborov zabalených do ZIP")
+        log_inf.info(f"{date}-teploty_sk - {len(htmlfiles)} suborov zabalených do ZIP")
         if date != dates[-1]:  # neodstranuj subory pre aktualny mesiac
             remove_files_list(htmlfiles)
-            logger_inf.info(f"{date}-teploty_sk - {len(htmlfiles)} suborov odstránených")
+            log_inf.info(f"{date}-teploty_sk - {len(htmlfiles)} suborov odstránených")
         
 def zrazky_brezno():   
     dates = get_date_interval(ZRAZKY_BREZNO_DIR)
@@ -154,12 +162,12 @@ def zrazky_brezno():
         # df = df.drop_duplicates(df, keep='first').sort_values(by='Cas_CET')
         df = remove_duplicates(df).sort_values(by='Cas_CET')
         save_frame(df, RES_ZRAZKY_BREZNO_DIR, f'zrazky_brezno_{date}')    
-        logger_inf.info(f"{date}-ZRAZKY_BREZNO - {len(df)} riadkov")
+        log_inf.info(f"{date}-ZRAZKY_BREZNO - {len(df)} riadkov")
         pack_to_zip(htmlfiles, RES_ZRAZKY_BREZNO_DIR + f'zrazky_brezno_{date}.zip')
-        logger_inf.info(f"{date}-zrazky_brezno - {len(htmlfiles)} suborov zabalených do ZIP")
+        log_inf.info(f"{date}-zrazky_brezno - {len(htmlfiles)} suborov zabalených do ZIP")
         if date != dates[-1]:  # neodstranuj subory pre aktualny mesiac
             remove_files_list(htmlfiles)
-            logger_inf.info(f"{date}-zrazky_brezno - {len(htmlfiles)} suborov odstránených")
+            log_inf.info(f"{date}-zrazky_brezno - {len(htmlfiles)} suborov odstránených")
         
     
 def zrazky_sk():   
@@ -178,10 +186,10 @@ def zrazky_sk():
                     df = pd.concat([df, table])
             # print(df.count().max())    
             # if df.count().max() > 50000:
-            #     # logger.warning(f"Súbor {file_path} má viac ako 50 riadkov, skontrolujte správnosť údajov!")
+            #     # log_err.warning(f"Súbor {file_path} má viac ako 50 riadkov, skontrolujte správnosť údajov!")
             #     break
             else:
-                logger.error(f"Súbor {file_path} je prázdny")
+                log_err.error(f"Súbor {file_path} je prázdny")
         df = df[df['Čas merania'] != 'Priemery:']
         df['Cas_CET'] = pd.to_datetime(df['Čas merania'], format='%d.%m.%Y %H:%M')
 
@@ -193,12 +201,12 @@ def zrazky_sk():
         df = df.convert_dtypes(dtype_backend='pyarrow') # prevedenie vsetkych stlpcov na pyarrow dtype
         
         save_frame(df[['Stanica', 'Typ', 'Cas_CET', 'Zrážky 1h', 'Zrážky 24h', 'file']], RES_ZRAZKY_SK_DIR, f'zrazky_sk_{date}')    
-        logger_inf.info(f"{date}-ZRAZKY_SK - {len(df)} riadkov")
+        log_inf.info(f"{date}-ZRAZKY_SK - {len(df)} riadkov")
         pack_to_zip(htmlfiles, RES_ZRAZKY_SK_DIR + f'zrazky_sk_{date}.zip')
-        logger_inf.info(f"{date}-ZRAZKY_SK - {len(htmlfiles)} suborov zabalených do ZIP")
+        log_inf.info(f"{date}-ZRAZKY_SK - {len(htmlfiles)} suborov zabalených do ZIP")
         if date != dates[-1]:  # neodstranuj subory pre aktualny mesiac
             remove_files_list(htmlfiles)
-            logger_inf.info(f"{date}-ZRAZKY_SK - {len(htmlfiles)} suborov odstránených")
+            log_inf.info(f"{date}-ZRAZKY_SK - {len(htmlfiles)} suborov odstránených")
         
 def hladiny_sk():
     dates = get_date_interval(HLADINY_SK_DIR)
@@ -214,7 +222,7 @@ def hladiny_sk():
                     table['file'] = file_path.name.split('.')[0]
                     df = pd.concat([df, table])
             else:
-                logger.error(f"Súbor {file_path} je prázdny")
+                log_err.error(f"Súbor {file_path} je prázdny")
         df['Cas_CET'] = pd.to_datetime(df['Čas merania'], format='%d.%m.%Y %H:%M')
         df = df.rename(columns={'Unnamed: 0': 'Typ'}) # premenovanie stlpca
         # df = df.drop_duplicates(subset=['Stanica', 'Tok', 'Cas_CET'], keep='first').sort_values(by='Cas_CET')
@@ -222,12 +230,12 @@ def hladiny_sk():
         df = to_cat(df, ['Stanica', 'Tok', 'Typ']) # prevedenie na category - nie je permanentne
         df = df.convert_dtypes(dtype_backend='pyarrow') # prevedenie vsetkych stlpcov na pyarrow dtype, cisla su v integer
         save_frame(df[['Stanica', 'Tok', 'Cas_CET', 'Vodný stav', 'file']], RES_HLADINY_SK_DIR, f'hladiny_sk_{date}')    
-        logger_inf.info(f"{date}-HLADINY_SK - {len(df)} riadkov")
+        log_inf.info(f"{date}-HLADINY_SK - {len(df)} riadkov")
         pack_to_zip(htmlfiles, RES_HLADINY_SK_DIR + f'hladiny_sk_{date}.zip')
-        logger_inf.info(f"{date}-HLADINY_SK - {len(htmlfiles)} suborov zabalených do ZIP")
+        log_inf.info(f"{date}-HLADINY_SK - {len(htmlfiles)} suborov zabalených do ZIP")
         if date != dates[-1]:  # neodstranuj subory pre aktualny mesiac
             remove_files_list(htmlfiles)
-            logger_inf.info(f"{date}-HLADINY_SK - {len(htmlfiles)} suborov odstránených")
+            log_inf.info(f"{date}-HLADINY_SK - {len(htmlfiles)} suborov odstránených")
         
 def podzemne_vody_sk():   
     dates = get_date_interval(PODZEMNE_VODY_SK_DIR)
@@ -246,7 +254,7 @@ def podzemne_vody_sk():
                 df_vrt = pd.concat([df_vrt, tablea])
                 df_prm = pd.concat([df_prm, tableb])
             else:
-                logger.error(f"Súbor {file_path} je prázdny")
+                log_err.error(f"Súbor {file_path} je prázdny")
         df_vrtcols ={'Číslo stanice' : 'Stanica', 'Názov lokality' : 'Nazov_lok', 'Hĺbka vrtu [m]' : 'Hlbka_vrtu', 'Nadmorská výška terénu [m]' : 'vyska_terenu',
                 'Dátum a čas merania' : 'Cas', 'Úroveň podzemnej vody [m n.m.]' : 'uroven_PV'}
         df_prmcols ={'Číslo stanice' : 'Stanica', 'Názov lokality' : 'Nazov_lok', 'Názov prameňa' : 'Nazov_prm', 'Nadmorská výška objektu [m]' : 'vyska_objektu',
@@ -274,13 +282,13 @@ def podzemne_vody_sk():
         save_frame(df_vrt, RES_PODZEMNE_VODY_VRT_SK_DIR, f'PV_vrt_sk_{date}')    
         save_frame(df_prm, RES_PODZEMNE_VODY_PRM_SK_DIR, f'PV_prm_sk_{date}')    
         
-        logger_inf.info(f"{date}-PODZEMNE_VODY_VRT_SK - df_vrt {len(df_vrt)} riadkov")
-        logger_inf.info(f"{date}-PODZEMNE_VODY_PRM_SK - df_prm {len(df_prm)} riadkov")
+        log_inf.info(f"{date}-PODZEMNE_VODY_VRT_SK - df_vrt {len(df_vrt)} riadkov")
+        log_inf.info(f"{date}-PODZEMNE_VODY_PRM_SK - df_prm {len(df_prm)} riadkov")
         pack_to_zip(htmlfiles, RES_PODZEMNE_VODY_SK_DIR + f'podzemne_vody_sk_{date}.zip')
-        logger_inf.info(f"{date}-PODZEMNE_VODY_SK - {len(htmlfiles)} suborov zabalených do ZIP")
+        log_inf.info(f"{date}-PODZEMNE_VODY_SK - {len(htmlfiles)} suborov zabalených do ZIP")
         if date != dates[-1]:  # neodstranuj subory pre aktualny mesiac
             remove_files_list(htmlfiles)
-            logger_inf.info(f"{date}-PODZEMNE_VODY_SK - {len(htmlfiles)} suborov odstránených")
+            log_inf.info(f"{date}-PODZEMNE_VODY_SK - {len(htmlfiles)} suborov odstránených")
     
 
 def prietoky_sk():
@@ -301,7 +309,7 @@ def prietoky_sk():
                 table['file'] = file_path.name.split('.')[0]
                 df = pd.concat([df, table])
             else:
-                logger.error(f"Súbor {file_path} je prázdny")
+                log_err.error(f"Súbor {file_path} je prázdny")
         #cistenie dat
         df.columns = df.columns.droplevel(1) # odstranenie viacriadkovych hlaviciek 
         df = df.rename(columns={'∆H': 'dH', 'QM,N' : 'QMN'}) # premenovanie stlpca
@@ -314,12 +322,12 @@ def prietoky_sk():
         df = df.convert_dtypes(dtype_backend='pyarrow') # prevedenie vsetkych stlpcov na pyarrow dtype
         # ulozenie spracovanych dat a vymazanie zdrojovych suborov - archivacia. POZOR aktualny mesiac sa nevymazava
         save_frame(df, RES_PRIETOKY_SK_DIR, f'prietoky_sk_{date}')
-        logger_inf.info(f"{date}-PRIETOKY_SK - {len(df)} riadkov")
+        log_inf.info(f"{date}-PRIETOKY_SK - {len(df)} riadkov")
         pack_to_zip(htmlfiles, RES_PRIETOKY_SK_DIR + f'prietoky_sk_{date}.zip')
-        logger_inf.info(f"{date}-PRIETOKY_SK - {len(htmlfiles)} suborov zabalených do ZIP")
+        log_inf.info(f"{date}-PRIETOKY_SK - {len(htmlfiles)} suborov zabalených do ZIP")
         if date != dates[-1]:  # neodstranuj subory pre aktualny mesiac
             remove_files_list(htmlfiles)
-            logger_inf.info(f"{date}-PRIETOKY_SK - {len(htmlfiles)} suborov odstránených")
+            log_inf.info(f"{date}-PRIETOKY_SK - {len(htmlfiles)} suborov odstránených")
         
 
 def remove_files_list(to_delete):
@@ -329,9 +337,9 @@ def remove_files_list(to_delete):
         try:
             pass
             # os.remove(file_path)
-            # logger.info(f'Odstránený súbor: {file_path}')
+            # log_inf.info(f'Odstránený súbor: {file_path}')
         except Exception as e:
-            logger.error(f'Chyba pri odstraňovaní súboru {file_path}: {e}')
+            log_err.error(f'Chyba pri odstraňovaní súboru {file_path}: {e}')
 
 def get_date_interval(datadir=TEPLOTY_SK_DIR):
     '''zisti interval dat v adresaroch na zaklade nazvov html suborov
@@ -350,10 +358,10 @@ def get_date_interval(datadir=TEPLOTY_SK_DIR):
             dates.add(date_str)
         min_date = min(dates)
         max_date = max(dates)
-        logger_inf.info(f"Adresár {datadir} obsahuje dáta od {min_date} do {max_date}, počet súborov: {len(htmlfiles)}")
+        log_inf.info(f"Adresár {datadir} obsahuje dáta od {min_date} do {max_date}, počet súborov: {len(htmlfiles)}")
         return sorted(dates)
     else:
-        logger.warning(f"Adresár {datadir} neobsahuje žiadne HTML súbory.")
+        log_err.warning(f"Adresár {datadir} neobsahuje žiadne HTML súbory.")
 
 def pack_to_zip(filelist, zipfilename):
     '''zabali subory filelist do zip suboru zipfilename'''
@@ -361,14 +369,17 @@ def pack_to_zip(filelist, zipfilename):
     with zipfile.ZipFile(zipfilename, 'w') as zipf:
         for file in filelist:
             zipf.write(file, arcname=Path(file).name)
-    logger_inf.info(f'Vytvorený ZIP súbor: {zipfilename}')
+    log_inf.info(f'Vytvorený ZIP súbor: {zipfilename}')
 
 def log_elapsed_time(func):
     start = dt.datetime.now()
-    logger_inf.info(f"{func.__name__}: Za4iatok: {start}")
+    log_inf.info(f"{func.__name__}: Za4iatok: {start}")
     func()
     elapsed = dt.datetime.now() - start
-    logger_inf.info(f"{func.__name__}: Celkový čas spracovania: {elapsed}")
+    log_inf.info(f"{func.__name__}: Celkový čas spracovania: {elapsed}")
+
+log_err = create_logger('err-1')
+log_inf = create_logger('inf-1')
 
 def main():
     workflow = [podzemne_vody_sk, prietoky_sk, hladiny_sk, zrazky_brezno, teploty] # zrazky_sk,

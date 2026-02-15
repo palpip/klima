@@ -12,7 +12,7 @@ from sqlalchemy import create_engine, text
 # logovanie do inf.log - informacie
 
 
-def get_data_from_parquets(directory, filter_query=None):
+def get_data_from_parquets(directory, filter_query=None, logger=None):
     '''
     Read and concatenate parquet files from a directory, with optional filtering.
     Returns an empty DataFrame if no parquet files are found.
@@ -32,39 +32,39 @@ def get_data_from_parquets(directory, filter_query=None):
         df = pd.DataFrame()
     return df
  
-def pack_to_zip(filelist, zipfilename):
+def pack_to_zip(filelist, zipfilename, logger=None):
     '''zabali subory filelist do zip suboru zipfilename'''
     import zipfile
     with zipfile.ZipFile(zipfilename, 'w') as zipf:
         for file in filelist:
             zipf.write(file, arcname=Path(file).name)
-    logger.info(f'Vytvorený ZIP súbor: {zipfilename}')
+    logger.info(f'Vytvorený ZIP súbor: {zipfilename}') if logger else None  
 
-def log_elapsed_time(func):
+def log_elapsed_time(func, logger=None):
     start = dt.datetime.now()
+    logger.info(f"{func.__name__}: Začiatok spracovania:{start}") if logger else None
     func()
     elapsed = dt.datetime.now() - start
-    logger.info(f"{func.__name__}: Celkový čas spracovania: {elapsed}")
+    logger.info(f"{func.__name__}: Celkový čas spracovania: {elapsed}") if logger else None
 
-
-def remove_duplicates(df):
+def remove_duplicates(df, logger=None):
     nr_records = df.Cas_CET.count()
     if 'file' in (l := list(df)):  #napodiv vracia stlpce do listu
         l.remove('file')
     df =df.drop_duplicates(l, keep='first').sort_values(by='Cas_CET')
-    logger.info(f"zaznamov: {nr_records}, duplikatov:  {nr_records - df.Cas_CET.count()}")
-    print(f"zaznamov: {nr_records}, duplikatov:  {nr_records - df.Cas_CET.count()}")
+    logger.info(f"zaznamov: {nr_records}, duplikatov:  {nr_records - df.Cas_CET.count()}") if logger else None
     return df
 
 def create_logger(logname):
     '''Create and return a logger with the specified name'''
     logger = logging.getLogger(logname)
-    logger.addHandler(logging.FileHandler(TOPDIR + f"{logname}{dt.datetime.now().strftime('%Y%m%d%H%M%S')}.log", mode='w'))
+    logger.addHandler(logging.FileHandler(TOPDIR + f"{logname}-{dt.datetime.now().strftime('%H-%M')}.log", mode='w'))
+    console_handler = logging.StreamHandler()
+    console_handler.setLevel(logging.INFO)
+    logger.addHandler(console_handler)
     logger.setLevel(logging.DEBUG)
     return logger
 
-logger = create_logger('log')
-logger_inf = create_logger('inf')
 
 
 # LOGFILE = "log1.log"

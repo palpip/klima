@@ -33,6 +33,17 @@ RES_PODZEMNE_VODY_VRT_SK_DIR = TOPRESDIR + r'podzemne_vody_vrt_sk/'
 TEMPTESTFILE = TEPLOTY_SK_DIR + '2025-07-30-15-00.html'
 UHRNTESTFILE = ZRAZKY_BREZNO_DIR + '2025-07-30-23-45.html'
 
+
+workflow = [
+    {'func': 'podzemne_vody_prm_sk', 'infile': RES_PODZEMNE_VODY_PRM_SK_DIR, 'lokalita': None, 'povodie': 'Hron'},
+    {'func': 'podzemne_vody_vrt_sk', 'infile': RES_PODZEMNE_VODY_VRT_SK_DIR, 'lokalita': None},
+    {'func': 'prietoky_sk', 'infile': RES_PRIETOKY_SK_DIR, 'lokalita': 'Brezno - Hron'},
+    {'func': 'hladiny_sk', 'infile': RES_HLADINY_SK_DIR, 'lokalita': 'Brezno', 'Tok':'Hron'},
+    {'func': 'zrazky_sk', 'infile': RES_ZRAZKY_SK_DIR, 'lokalita': 'Brezno'},
+    {'func': 'teploty', 'infile': RES_TEPLOTY_SK_DIR, 'lokalita': 'Brezno'}
+    ]
+
+
 # DATADIRS = ['teploty_sk/', 'zrazky_brezno/', 'zrazky_sk/', 'hladiny_sk/','prietoky_sk/','podzemne_vody_sk/']
 # DATABASES = [
 #     TEPLOTY_SK_DIR+'teploty_sk',
@@ -44,11 +55,11 @@ UHRNTESTFILE = ZRAZKY_BREZNO_DIR + '2025-07-30-23-45.html'
 # DBFILES = [db+'.parquet' for db in DATABASES]
         
 # not used
-MEASUREMENTS = {
-    'teploty': 'Teplota vzduchu (°C)',
-    'zrazky_brezno': 'Úhrn zrážok (mm)',
-    'zrazky_sk': 'Úhrn zrážok (mm)',
-    'hladiny_sk': 'Vodný stav (cm)',
-    'prietoky_sk': 'Prietok (m3/s)',
-    'podzemne_vody_sk': 'Hladina podzemnej vody (m'}
+# MEASUREMENTS = {
+#     'teploty': 'Teplota vzduchu (°C)',
+#     'zrazky_brezno': 'Úhrn zrážok (mm)',
+#     'zrazky_sk': 'Úhrn zrážok (mm)',
+#     'hladiny_sk': 'Vodný stav (cm)',
+#     'prietoky_sk': 'Prietok (m3/s)',
+#     'podzemne_vody_sk': 'Hladina podzemnej vody (m'}
 
