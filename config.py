@@ -35,10 +35,10 @@ UHRNTESTFILE = ZRAZKY_BREZNO_DIR + '2025-07-30-23-45.html'
 
 
 workflow = [
+    {'func': 'hladiny_sk', 'infile': RES_HLADINY_SK_DIR, 'lokalita': 'Brezno', 'Tok':'Hron'},
+    {'func': 'prietoky_sk', 'infile': RES_PRIETOKY_SK_DIR, 'lokalita': 'Brezno - Hron'},
     {'func': 'podzemne_vody_prm_sk', 'infile': RES_PODZEMNE_VODY_PRM_SK_DIR, 'lokalita': None, 'povodie': 'Hron'},
     {'func': 'podzemne_vody_vrt_sk', 'infile': RES_PODZEMNE_VODY_VRT_SK_DIR, 'lokalita': None},
-    {'func': 'prietoky_sk', 'infile': RES_PRIETOKY_SK_DIR, 'lokalita': 'Brezno - Hron'},
-    {'func': 'hladiny_sk', 'infile': RES_HLADINY_SK_DIR, 'lokalita': 'Brezno', 'Tok':'Hron'},
     {'func': 'zrazky_sk', 'infile': RES_ZRAZKY_SK_DIR, 'lokalita': 'Brezno'},
     {'func': 'teploty', 'infile': RES_TEPLOTY_SK_DIR, 'lokalita': 'Brezno'}
     ]

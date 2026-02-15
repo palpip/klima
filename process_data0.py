@@ -64,18 +64,22 @@ def save_frame(df, dirname, dfname):
     '''ulozi dataframes v adresari dirname vo formate
     dfname.csv, dfname.xlsx, dfname.sqlite3'''
     
-    print('-----', dirname + dfname + '.xlsx')
-    with pd.ExcelWriter(TOPRESDIR + XLSNAME, mode = 'a', engine='openpyxl', if_sheet_exists='replace') as EXCELWRITER:
-        df.to_excel(EXCELWRITER, sheet_name=dfname, index=False)
-    log_inf.info(f"{dirname} - {dfname} {len(df)} riadkov saved to excel")
-    
+    print(f'ukladám {dfname}')
+    if len(df) < 1.048e6:
+        with pd.ExcelWriter(TOPRESDIR + XLSNAME, mode = 'a', engine='openpyxl', if_sheet_exists='replace') as EXCELWRITER:
+            df.to_excel(EXCELWRITER, sheet_name=dfname, index=False)
+            log_inf.info(f"{dirname} - {dfname} {len(df)} riadkov uložených do excelu")
+    else:
+        log_err.error(f'{dfname} obsahuje {len(df)} riadkov, viac ako je povolený limit excelu, nie je uložené')
+        
     # ciastkove ulozenie do sqlite3 - nepouzivane
     # conn = sqlite3.connect(dirname + dfname + '.sqlite')
     # df.to_sql(dfname, conn, if_exists='replace', index=False)
     
     # ciastkove ulozenie do postgresql - nepouzivane
-    # engine = create_engine(CONNSTR)
-    # df.to_sql(dfname, engine, if_exists='replace', index=False)
+    engine = create_engine(CONNSTR)
+    df.to_sql('kompl-'+ dfname, engine, if_exists='replace', index=False)
+    log_inf.info(f"{dirname} - {dfname} {len(df)} riadkov uložených do postgresu")
     
     # ciastkove ulozenie do parquet - nepouzivane
     # df.to_parquet(TOPRESDIR + dfname + '.parquet', engine='auto') 
@@ -136,7 +140,8 @@ def hladiny_sk(infile=RES_HLADINY_SK_DIR, lokalita=None, **args):
     # df_agg.sort_values(by=['Stanica', 'Tok', 'Cas_CET'], inplace=True)  
     
     # save whole SK
-    save_frame(df_agg, HLADINY_SK_DIR, 'hladiny_sk')    
+    save_frame(df, HLADINY_SK_DIR, 'hladiny_sk')    
+    save_frame(df_agg, HLADINY_SK_DIR, 'hladiny_sk_denne')    
     
     # filter lokalita
     # surove data pre lokalitu
@@ -148,7 +153,6 @@ def hladiny_sk(infile=RES_HLADINY_SK_DIR, lokalita=None, **args):
     df_lokalita_agg = df_agg[(df_agg['Stanica'] == lokalita) & (df_agg['Tok'] == tok)]
     df_lokalita_agg = df_lokalita_agg.sort_values(by='level_2')
     save_frame(df_lokalita_agg, RES_HLADINY_SK_DIR, 'hladiny_denne_'+lokalita.replace(' - ', '_').lower())
-    # filter by statio n and tok    
     log_inf.info(f"HLADINY_SK - {len(df)} riadkov")  
     
 
@@ -161,11 +165,11 @@ def prietoky_sk(infile=RES_PRIETOKY_SK_DIR, lokalita=None, **args):
     dfb = df[df['Stanica - tok'] == lokalita]
     dfb.loc[:,['Cas_CET']] = pd.to_datetime(dfb['Cas_CET'].dt.date, errors='coerce')
     dfb = dfb.sort_values(by='Cas_CET')    
+    save_frame(df, PRIETOKY_SK_DIR, 'prietoky_sk')
+    log_inf.info(f"PRIETOKY_SK - {len(df)} riadkov")
     save_frame(dfb, PRIETOKY_SK_DIR, 'prietoky_'+ lokalita.replace(' - ', '_').lower())    
     log_inf.info(f"PRIETOKY_BREZNO - {len(dfb)} riadkov")
-    # save_frame(df, PRIETOKY_SK_DIR, 'prietoky_sk')
-    # log_inf.info(f"PRIETOKY_SK - {len(df)} riadkov")
-
+    
 
 def podzemne_vody_prm_sk(infile=RES_PODZEMNE_VODY_PRM_SK_DIR, lokalita=None, **args):
     df = read_parquets(infile) # + '.parquet')
