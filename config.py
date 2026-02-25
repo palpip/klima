@@ -1,11 +1,13 @@
 '''Configuration file for SHMU data processing'''
 
 CONNSTRS = ['postgresql://pp:ppp@192.168.1.105:5432/shmu',  # database connection string doma
-            'postgresql://pp:ppp@172.16.0.119:5432/shmu']   # database connection string ENVIGEO - postgresql server
+            'postgresql://pp:ppp@172.16.0.119:5432/shmu',
+            'mariadb://pp@172.16.0.2:3306/shmu']   # database connection string ENVIGEO - postgresql server
 
-SHMUDIRS =[f'/home/pp/program/jupyter/SHMUSSD/',f'f:/AAA/DATA/SHMU/', f'C:/Users/envigeo/program/python/klima/SHMU/']  # possible SHMU data directories
-SHMUDIR = SHMUDIRS[2]  # select the appropriate SHMU data directory
-CONNSTR = CONNSTRS[1]  # select the appropriate database connection string
+SHMUDIRS =[f'/home/pp/program/jupyter/SHMUSSD/',f'f:/AAA/DATA/SHMU/', f'C:/Users/envigeo/program/python/klima/SHMU/', f'y:/SHMU/']  # possible SHMU data directories
+SHMUDIR = SHMUDIRS[3]  # select the appropriate SHMU data directory
+CONNSTR = CONNSTRS[2]  # select the appropriate database connection string - mariadb
+CONNSTR_PG = CONNSTRS[1]  # select the appropriate database connection string
 
 TOPDIR = SHMUDIR + r'zber/'
 TEPLOTY_SK_DIR = TOPDIR + r'teploty_sk/'

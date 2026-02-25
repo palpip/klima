@@ -74,7 +74,10 @@ def save_frame(df, dirname, dfname):
     
     engine = create_engine(CONNSTR)
     df.to_sql(dfname, engine, if_exists='replace', index=False)
-    log_inf.info(f"{dfname} {len(df)} riadkov saved to database")
+    log_inf.info(f"{dfname} {len(df)} riadkov saved to MariaDB")
+    engine = create_engine(CONNSTR_PG)
+    df.to_sql(dfname, engine, if_exists='replace', index=False)
+    log_inf.info(f"{dfname} {len(df)} riadkov saved to PostgreSQL")
    
     # df.to_excel(dirname + dfname + '.xlsx')
     # log_inf.info(f"{dirname}{dfname} {len(df)} riadkov saved to excel")
@@ -153,11 +156,13 @@ def zrazky_brezno():
         df = pd.DataFrame()
         htmlfiles = list(Path(ZRAZKY_BREZNO_DIR).glob(f'*{date}*.html'))
         for file_path in htmlfiles:
-            print(file_path)
-            table = extract_tables_from_html(file_path,1)
-            table['file'] = file_path.name.split('.')[0]
-            df = pd.concat([df, table])
-        
+            if file_path.stat().st_size > 0:
+                print(file_path)
+                table = extract_tables_from_html(file_path,1)
+                table['file'] = file_path.name.split('.')[0]
+                df = pd.concat([df, table])
+            else:
+                log_err.error(f"Súbor {file_path} je prázdny")
         df['Cas_CET'] = pd.to_datetime(df['Čas merania'], format='%d.%m.%Y %H:%M')
         # df = df.drop_duplicates(df, keep='first').sort_values(by='Cas_CET')
         df = remove_duplicates(df).sort_values(by='Cas_CET')
@@ -335,9 +340,9 @@ def remove_files_list(to_delete):
     import os
     for file_path in to_delete:
         try:
-            pass
-            # os.remove(file_path)
-            # log_inf.info(f'Odstránený súbor: {file_path}')
+            # pass
+            os.remove(file_path)
+            log_inf.info(f'Odstránený súbor: {file_path}')
         except Exception as e:
             log_err.error(f'Chyba pri odstraňovaní súboru {file_path}: {e}')
 
@@ -394,9 +399,10 @@ def main():
     # workflow = [zrazky_sk, zrazky_brezno, teploty]
     # workflow = [prietoky_sk]
      
+    starttime = dt.datetime.now()
     for func in workflow:
         log_elapsed_time(func)
-    print('done')
+    print('done in ', dt.datetime.now() - starttime )
 
 def main1():
   print ()

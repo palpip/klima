@@ -3,7 +3,9 @@ import pandas as pd
 from pathlib import Path
 import datetime as dt
 import logging
+import mysql
 from config import *
+
 from sqlalchemy import create_engine, text
 
 
@@ -67,38 +69,58 @@ def create_logger(logname):
 
 
 
-# LOGFILE = "log1.log"
-# LOGFILE_INF = "inf.log" 
-# logger=logging.getLogger('log')
-# logger.addHandler(logging.FileHandler(TOPDIR + LOGFILE, mode='w'))
-# logger_inf = logging.getLogger('inf')
-# logger_inf.addHandler(logging.FileHandler(TOPDIR + LOGFILE_INF, mode='w'))
-# logger.setLevel(logging.DEBUG)
-# logger_inf.setLevel(logging.DEBUG)
-
 #------------------
 # not used - automatic selection of connection string and data directory
 #------------------
-# def test_postgresql_connection(connstr):
-#     '''Test connection to PostgreSQL database'''
-#     try:
-#         engine = create_engine(connstr)
-#         with engine.connect() as conn:
-#             result = conn.execute(text("SELECT 1")).first()
-#             if result[0] == 1:
-#                 return True
-#             else:
-#                 return False 
-#     except Exception as e:
-#         return False
+def test_db_connection(connstr):
+    '''Test connection to  database'''
+    try:
+        engine = create_engine(connstr)
+        with engine.connect() as conn:
+            result = conn.execute(text("SELECT 1")).first()
+            if result[0] == 1:
+                return True
+            else:
+                return False 
+    except Exception as e:
+        print(e)
+        return False
+
+
+    
 
 # CONNSTR = None
 # for connstr in CONNSTRS:
-#     if test_postgresql_connection(connstr):
+#     print(f'testing: {connstr}')
+#     if test_db_connection(connstr):
 #         print(f'Connection successful: {connstr}')
 #         CONNSTR = connstr
-#         break
-# print (CONNSTR)
+#         # break
+#     else:
+#         print(f'Connection failed: {connstr}')
+#     print (CONNSTR)
+
+
+
+
+
+
+
+# connstr = 'mariadb://pp@172.16.0.2:3306/envi'
+# print(f'testing: {connstr}')
+# engine = create_engine(connstr)
+# conn = engine.connect()
+# result = conn.execute(text("SELECT 1")).first()
+# print(result)
+# exit()
+# if test_db_connection(connstr):
+#     print(f'Connection successful: {connstr}')
+#     CONNSTR = connstr
+#     # break
+# else:
+#     print(f'Connection failed: {connstr}')
+
+
 
 # SHMUDIR = ''
 # for shmudir in SHMUDIRS:

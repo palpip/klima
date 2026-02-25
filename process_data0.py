@@ -79,7 +79,10 @@ def save_frame(df, dirname, dfname):
     # ciastkove ulozenie do postgresql - nepouzivane
     engine = create_engine(CONNSTR)
     df.to_sql('kompl-'+ dfname, engine, if_exists='replace', index=False)
-    log_inf.info(f"{dirname} - {dfname} {len(df)} riadkov uložených do postgresu")
+    log_inf.info(f"{dirname} - {dfname} {len(df)} riadkov uložených do MariaDB")
+    engine = create_engine(CONNSTR_PG)
+    df.to_sql('kompl-'+ dfname, engine, if_exists='replace', index=False)
+    log_inf.info(f"{dirname} - {dfname} {len(df)} riadkov uložených do PostgreSQL")
     
     # ciastkove ulozenie do parquet - nepouzivane
     # df.to_parquet(TOPRESDIR + dfname + '.parquet', engine='auto') 
@@ -91,11 +94,13 @@ def teploty(infile=RES_TEPLOTY_SK_DIR, lokalita=None, **args):
     #read parquet file
     df = read_parquets(infile) # + '.parquet')
     # grouped/aggregated by station
+    save_frame(df,RES_TEPLOTY_SK_DIR, 'teploty_sk')
     df_agg = df
     df_agg = df_agg.set_index('Cas_CET').groupby('Stanica').resample('D').Teplota.agg(['min', 'max', 'mean'])
     df_agg.reset_index(inplace=True)
     df_agg['Cas_CET'] = df_agg['Cas_CET'].dt.strftime('%Y-%m-%d')
     df_agg.sort_values(by=['Stanica','Cas_CET'], inplace=True)
+    save_frame(df_agg,RES_TEPLOTY_SK_DIR, 'teploty_sk_denne')
     
     # filter lokalita
     # surove data pre lokalitu 
@@ -108,6 +113,7 @@ def teploty(infile=RES_TEPLOTY_SK_DIR, lokalita=None, **args):
     
 def zrazky_sk(infile=RES_ZRAZKY_SK_DIR, lokalita = 'Brezno'):
     df = read_parquets(infile) # + '.parquet'   )
+    save_frame(df,RES_ZRAZKY_SK_DIR, 'zrazky_sk')
     # make daily averages
     # grouped/aggregated by station
     df_agg = df
@@ -200,9 +206,10 @@ def run_func(wkflow):
 
 
 def main():
-    print(workflow)
+
+    starttime = dt.datetime.now()
     run_func(workflow)
-    print('dokončené')
+    print('done in ', dt.datetime.now() - starttime )
     exit()
 
 if __name__ == "__main__":
